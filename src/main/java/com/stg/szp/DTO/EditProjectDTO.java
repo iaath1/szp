@@ -1,19 +1,16 @@
 package com.stg.szp.DTO;
 
-import java.time.LocalDateTime;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
 @Builder
-@NoArgsConstructor
+@Data
 @AllArgsConstructor
-public class ProjectResponseDTO {
+@NoArgsConstructor
+public class EditProjectDTO {
     private String title;
     private String description;
-    private LocalDateTime createdAt;
-    private UserResponseDTO owner;
+
 }

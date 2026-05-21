@@ -34,7 +34,9 @@ public class ApplicationCofiguration {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> userRepo.findByEmail(username);
+        return username -> userRepo.findByEmail(username)
+                .orElseThrow(() -> new org.springframework.security.core.userdetails.UsernameNotFoundException(
+                        "User not found: " + username));
     }
 
     @Bean

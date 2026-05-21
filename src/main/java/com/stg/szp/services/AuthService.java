@@ -45,6 +45,8 @@ public class AuthService {
             new UsernamePasswordAuthenticationToken(input.getEmail(), input.getPassword())
         );
 
-        return userRepo.findByEmail(input.getEmail());
+        return userRepo.findByEmail(input.getEmail())
+                .orElseThrow(() -> new org.springframework.security.core.userdetails.UsernameNotFoundException(
+                        "User not found: " + input.getEmail()));
     }
 }
