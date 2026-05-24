@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.service.annotation.PatchExchange;
 
+import com.stg.szp.DTO.AddUserToProjectDTO;
 import com.stg.szp.DTO.CreateProjectDTO;
 import com.stg.szp.DTO.EditProjectDTO;
 import com.stg.szp.DTO.ProjectDetailsDTO;
@@ -64,6 +65,15 @@ public class ProjectController {
         } else {
             return new ResponseEntity<>(response, HttpStatus.OK);
         }
+    }
+
+    @PostMapping("/{projectId}/members")
+    public ResponseEntity<?> addNewMemberToProject(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId,
+         @RequestBody AddUserToProjectDTO addUserToProjectDTO) {
+        boolean isProjectSaved = projectService.addNewMemberToProject(user, projectId, addUserToProjectDTO.getEmail());
+
+        if(isProjectSaved) { return new ResponseEntity<>(HttpStatus.OK); }
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
     }
 
 }

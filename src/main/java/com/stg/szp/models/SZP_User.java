@@ -23,11 +23,13 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "users")
 @Data
+@EqualsAndHashCode(of = "id")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -60,6 +62,7 @@ public class SZP_User implements UserDetails {
     @Column(name = "created_at", updatable = false)
     private Timestamp createdAt;
 
+    @JsonIgnore
     @ManyToMany(mappedBy = "members")
     private Set<Project> projects = new HashSet<>();
 
