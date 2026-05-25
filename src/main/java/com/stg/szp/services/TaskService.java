@@ -89,4 +89,45 @@ public class TaskService {
 
     }
 
+    public TaskDetailsDTO updateTask(SZP_User user, Long projectID, Long taskId, CreateTaskDTO createTaskDTO) {
+        if(!projectRepository.existsById(projectID) || !taskRepository.existsById(taskId)) return null;
+
+        Project project = projectRepository.findById(projectID).get();
+        if(!project.getOwner().getId().equals(user.getId())) return null;
+
+        if(!SZP_UserRepository.existsByEmail(createTaskDTO.getAssigneeEmail())) return null;
+        SZP_User userAssignee = SZP_UserRepository.findByEmail(createTaskDTO.getAssigneeEmail()).get();
+
+        Task task = taskRepository.findById(taskId).get();
+        task.setTitle(createTaskDTO.getTitle());
+        task.setDescription(createTaskDTO.getDescription());
+        task.setAssignee(userAssignee);
+        task.setPriority(TaskPriority.valueOf(createTaskDTO.getPriority()));
+        task.setStatus(TaskStatus.valueOf(createTaskDTO.getStatus()));
+        task.setUpdatedAt(LocalDateTime.now());
+        taskRepository.save(task);
+
+        return TaskDetailsDTO.builder()
+            .id(task.getId())
+            .assigneeEmail(createTaskDTO.getAssigneeEmail())
+            .createdAt(task.getCreatedAt())
+            .updatedAt(task.getUpdatedAt())
+            .title(task.getTitle())
+            .description(task.getDescription())
+            .status(task.getStatus().name())
+            .priority(task.getPriority().name())
+            .build();
+
+    }
+
+    public boolean deleteTask(SZP_User user, Long projectId, Long taskId) {
+        if(!projectRepository.existsById(projectId) || !taskRepository.existsById(taskId)) return false;
+
+        if(!projectRepository.findById(projectId).get().getOwner().getId().equals(user.getId())) return false;
+
+        taskRepository.delete(taskRepository.findById(taskId).get());
+
+        return true;
+    }
+
 }
