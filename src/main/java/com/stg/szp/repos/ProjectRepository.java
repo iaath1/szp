@@ -16,4 +16,6 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     @Query("SELECT DISTINCT p FROM Project p LEFT JOIN p.members m WHERE p.owner = :user OR m = :user")
     List<Project> findAllByOwnerOrMember(@Param("user") SZP_User user);
+
+    long countByMembers_Id(Long userId);
 }

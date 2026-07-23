@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.stg.szp.DTO.CreateTaskDTO;
+import com.stg.szp.DTO.NumberResponseDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
 import com.stg.szp.models.SZP_User;
 import com.stg.szp.services.TaskService;
@@ -67,5 +68,12 @@ public class TaskController {
     public ResponseEntity<?> deleteTask(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId, @PathVariable Long taskId) {
         if(taskService.deleteTask(user, projectId, taskId)) return new ResponseEntity<>(HttpStatus.OK);
         return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+    @GetMapping("/count")
+    public ResponseEntity<NumberResponseDTO> getCountAllUserTasks(@AuthenticationPrincipal SZP_User user) {
+        NumberResponseDTO response = new NumberResponseDTO(taskService.getCountAllUserTasks(user.getId()));
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

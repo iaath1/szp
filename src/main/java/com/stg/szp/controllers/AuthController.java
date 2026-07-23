@@ -43,6 +43,8 @@ public class AuthController {
         String jwtToken = jwtService.generateToken(authenticatedUser);
 
         LoginResponse loginResponse = new LoginResponse();
+        loginResponse.setFirstname(authenticatedUser.getName());
+        loginResponse.setLastname(authenticatedUser.getSurname());
         loginResponse.setToken(jwtToken);
         loginResponse.setExpiration(jwtService.getJwtExpiration());
 
@@ -54,6 +56,8 @@ public class AuthController {
     @Setter
     @NoArgsConstructor
     class LoginResponse {
+        private String firstname;
+        private String lastname;
         private String token;
         private long expiration;
     }

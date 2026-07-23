@@ -18,10 +18,14 @@ import org.springframework.web.service.annotation.PatchExchange;
 import com.stg.szp.DTO.AddUserToProjectDTO;
 import com.stg.szp.DTO.CreateProjectDTO;
 import com.stg.szp.DTO.EditProjectDTO;
+import com.stg.szp.DTO.NumberResponseDTO;
 import com.stg.szp.DTO.ProjectDetailsDTO;
 import com.stg.szp.DTO.ProjectResponseDTO;
+import com.stg.szp.models.Project;
 import com.stg.szp.models.SZP_User;
 import com.stg.szp.services.ProjectService;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 @RestController
 @RequestMapping("/api/projects")
@@ -75,5 +79,15 @@ public class ProjectController {
         if(isProjectSaved) { return new ResponseEntity<>(HttpStatus.OK); }
         return new ResponseEntity<>(HttpStatus.FORBIDDEN);
     }
+
+    @GetMapping("/count")
+    public ResponseEntity<NumberResponseDTO> getAllProjectsCount(@AuthenticationPrincipal SZP_User user) {
+        NumberResponseDTO response = new NumberResponseDTO(projectService.getUserProjectsCount(user.getId()));
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    
+    
 
 }

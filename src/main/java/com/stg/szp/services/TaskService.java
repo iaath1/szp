@@ -130,4 +130,8 @@ public class TaskService {
         return true;
     }
 
+    public Long getCountAllUserTasks(Long userId) {
+        return taskRepository.countByAssigneeId(userId);
+    }
+
 }

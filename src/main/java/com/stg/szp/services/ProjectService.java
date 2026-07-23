@@ -128,6 +128,10 @@ public class ProjectService {
         return false;
     }
 
+    public Long getUserProjectsCount(Long userId) {
+        return projectRepository.countByMembers_Id(userId);
+    }
+
 
     private UserResponseDTO mapToUserResponseDTO(SZP_User user) {
         if (user == null) {
@@ -140,5 +144,6 @@ public class ProjectService {
                 .surname(user.getSurname())
                 .build();
     }
+
 
 }

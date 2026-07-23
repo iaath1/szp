@@ -1,5 +1,6 @@
 package com.stg.szp.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,7 +16,8 @@ import com.stg.szp.repos.SZP_UserRepository;
 @Configuration
 public class ApplicationCofiguration {
 
-    private final SZP_UserRepository userRepo;
+    @Autowired
+    private SZP_UserRepository userRepo;
 
     public ApplicationCofiguration(SZP_UserRepository userRepo) {
         this.userRepo = userRepo;
