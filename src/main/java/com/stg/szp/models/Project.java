@@ -8,10 +8,13 @@ import java.util.Set;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.cglib.core.Local;
+import org.springframework.data.annotation.LastModifiedDate;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -47,6 +50,10 @@ public class Project {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProjectStatus status;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "owner_id", nullable = false)
     private SZP_User owner;
@@ -54,9 +61,21 @@ public class Project {
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "start_at")
+    private LocalDateTime startAt;
+
+    @Column(name = "deadline_at")
+    private LocalDateTime deadlineAt;
+
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    private boolean isPrivate;
+
     @ManyToMany
     @JoinTable(
-        name = "prject_members",
+        name = "project_members",
         joinColumns = @JoinColumn(name = "project_id"),
         inverseJoinColumns = @JoinColumn(name = "user_id")
     )

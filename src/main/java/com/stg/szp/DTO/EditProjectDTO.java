@@ -1,5 +1,7 @@
 package com.stg.szp.DTO;
 
+import com.stg.szp.models.ProjectStatus;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,5 +14,5 @@ import lombok.NoArgsConstructor;
 public class EditProjectDTO {
     private String title;
     private String description;
-
+    private ProjectStatus status;
 }

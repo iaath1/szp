@@ -29,9 +29,10 @@ public class TaskDetailsDTO {
     private Long id;
     private String title;
     private String description;
-    private String status;
-    private String priority;
+    private TaskStatus status;
+    private TaskPriority priority;
     private String assigneeEmail;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime deadlineAt;
 }

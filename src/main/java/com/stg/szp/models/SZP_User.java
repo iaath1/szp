@@ -46,6 +46,9 @@ public class SZP_User implements UserDetails {
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = true)
+    private String avatarPath = "/uploads/default_user_avatar.png";
+
     private String name;
     private String surname;
 
@@ -65,6 +68,9 @@ public class SZP_User implements UserDetails {
     @JsonIgnore
     @ManyToMany(mappedBy = "members")
     private Set<Project> projects = new HashSet<>();
+
+    @Column(name="refresh_token")
+    private String refreshToken;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -26,7 +26,8 @@ import lombok.NoArgsConstructor;
 public class CreateTaskDTO {
     private String title;
     private String description;
-    private String status;
-    private String priority;
+    private TaskStatus status;
+    private TaskPriority priority;
+    private LocalDateTime deadlineAt;
     private String assigneeEmail;
 }

@@ -13,19 +13,21 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.service.annotation.PatchExchange;
 
 import com.stg.szp.DTO.AddUserToProjectDTO;
 import com.stg.szp.DTO.CreateProjectDTO;
 import com.stg.szp.DTO.EditProjectDTO;
+import com.stg.szp.DTO.MyProjectDTO;
+import com.stg.szp.DTO.MyProjectsStatsDTO;
 import com.stg.szp.DTO.NumberResponseDTO;
 import com.stg.szp.DTO.ProjectDetailsDTO;
 import com.stg.szp.DTO.ProjectResponseDTO;
-import com.stg.szp.models.Project;
+import com.stg.szp.DTO.TaskDetailsDTO;
+import com.stg.szp.DTO.TaskStatusCountDTO;
+import com.stg.szp.DTO.UpcomingTasksDTO;
+import com.stg.szp.DTO.UserResponseDTO;
 import com.stg.szp.models.SZP_User;
 import com.stg.szp.services.ProjectService;
-import org.springframework.web.bind.annotation.RequestParam;
-
 
 @RestController
 @RequestMapping("/api/projects")
@@ -38,16 +40,30 @@ public class ProjectController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProjectResponseDTO>> getMyProjects(@AuthenticationPrincipal SZP_User user) {
-        List<ProjectResponseDTO> projects = projectService.getUserProjects(user);
+    public ResponseEntity<List<MyProjectDTO>> getMyProjects(@AuthenticationPrincipal SZP_User user) {
+        List<MyProjectDTO> projects = projectService.getUserProjects(user);
         return ResponseEntity.ok(projects);
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<MyProjectsStatsDTO> getMyProjectsStats(@AuthenticationPrincipal SZP_User user) {
+        MyProjectsStatsDTO response = projectService.getUserProjectStats(user);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping
     public ResponseEntity<ProjectResponseDTO> createProject(@AuthenticationPrincipal SZP_User user,
             @RequestBody CreateProjectDTO createProjectDTO) {
         return ResponseEntity
-                .ok(projectService.createProject(user, createProjectDTO.getTitle(), createProjectDTO.getDescription()));
+                .ok(
+                        projectService.createProject(
+                                user, createProjectDTO.getTitle(),
+                                createProjectDTO.getDescription(),
+                                createProjectDTO.isPrivate(),
+                                createProjectDTO.getDeadlineAt(),
+                                createProjectDTO.getStartAt(),
+                                createProjectDTO.getStatus()
+                        ));
     }
 
     @PatchMapping("/edit/{id}")
@@ -64,19 +80,43 @@ public class ProjectController {
     public ResponseEntity<?> getInfoAboutProject(@AuthenticationPrincipal SZP_User user, @PathVariable Long id) {
         ProjectDetailsDTO response = projectService.getProjectDetails(id, user);
 
-        if(response == null) {
+        if (response == null) {
             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         } else {
             return new ResponseEntity<>(response, HttpStatus.OK);
         }
     }
 
+    @GetMapping("tasks-stats/{id}")
+    public ResponseEntity<?> getProjectTasksStats(@AuthenticationPrincipal SZP_User user, @PathVariable Long id) {
+
+        if (user != null) {
+            TaskStatusCountDTO response = projectService.getProjectTasksStats(id);
+            return ResponseEntity.ok(response);
+        }
+
+        return new ResponseEntity<>(HttpStatusCode.valueOf(403));
+
+    }
+
+    @GetMapping("/{projectId}/members")
+    public ResponseEntity<List<UserResponseDTO>> getProjectMembers(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId) {
+        if (user != null) {
+            List<UserResponseDTO> response = projectService.getProjectMembers(projectId);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
     @PostMapping("/{projectId}/members")
     public ResponseEntity<?> addNewMemberToProject(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId,
-         @RequestBody AddUserToProjectDTO addUserToProjectDTO) {
+            @RequestBody AddUserToProjectDTO addUserToProjectDTO) {
         boolean isProjectSaved = projectService.addNewMemberToProject(user, projectId, addUserToProjectDTO.getEmail());
 
-        if(isProjectSaved) { return new ResponseEntity<>(HttpStatus.OK); }
+        if (isProjectSaved) {
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
         return new ResponseEntity<>(HttpStatus.FORBIDDEN);
     }
 
@@ -87,7 +127,24 @@ public class ProjectController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    
-    
+    @GetMapping("/upcoming-tasks/{projectId}")
+    public ResponseEntity<List<UpcomingTasksDTO>> getProjectUpcomingTasks(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId) {
+        if (user != null) {
+            List<UpcomingTasksDTO> response = projectService.getProjectUpcomingTasks(projectId);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+    @GetMapping("/tasks/{projectId}")
+    public ResponseEntity<List<TaskDetailsDTO>> getProjectTasks(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId) {
+        if (user != null) {
+            List<TaskDetailsDTO> response = projectService.getProjectTasks(projectId);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
 
 }

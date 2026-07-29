@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.stg.szp.DTO.CreateTaskDTO;
 import com.stg.szp.DTO.NumberResponseDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
+import com.stg.szp.DTO.TaskStatusCountDTO;
+import com.stg.szp.DTO.UpcomingTasksDTO;
 import com.stg.szp.models.SZP_User;
 import com.stg.szp.services.TaskService;
 
@@ -31,16 +33,16 @@ public class TaskController {
         this.taskService = taskService;
     }
 
-    @GetMapping("/{projectId}")
-    public ResponseEntity<?> getAllProjectTasks(@PathVariable Long projectId, @AuthenticationPrincipal SZP_User user) {
-        List<TaskDetailsDTO> response = taskService.getAllTasksOfProject(user, projectId);
+    // @GetMapping("/{projectId}")
+    // public ResponseEntity<?> getAllProjectTasks(@PathVariable Long projectId, @AuthenticationPrincipal SZP_User user) {
+    //     List<TaskDetailsDTO> response = taskService.getAllTasksOfProject(user, projectId);
 
-        if(response == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+    //     if(response == null) {
+    //         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    //     }
 
-        return new ResponseEntity<>(response, HttpStatus.OK);
-    }
+    //     return new ResponseEntity<>(response, HttpStatus.OK);
+    // }
 
     @PostMapping("/{projectId}")
     public ResponseEntity<?> createTask(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId, @RequestBody CreateTaskDTO createTaskDTO) {
@@ -75,5 +77,19 @@ public class TaskController {
         NumberResponseDTO response = new NumberResponseDTO(taskService.getCountAllUserTasks(user.getId()));
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/count-by-statuses")
+    public ResponseEntity<TaskStatusCountDTO> getCountAllUserTasksByStatuses(@AuthenticationPrincipal SZP_User user) {
+        TaskStatusCountDTO response = taskService.getCountAllUserTasksByStatuses(user.getId());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/upcoming")
+    public ResponseEntity<List<UpcomingTasksDTO>> getUpcomingTasks(@AuthenticationPrincipal SZP_User user) {
+        List<UpcomingTasksDTO> tasks = taskService.getTasksOrderedByDeadline(user);
+
+        return new ResponseEntity<>(tasks, HttpStatus.OK);
     }
 }

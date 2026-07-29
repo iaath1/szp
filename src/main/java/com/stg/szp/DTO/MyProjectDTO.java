@@ -1,13 +1,9 @@
 package com.stg.szp.DTO;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import com.stg.szp.models.ProjectStatus;
-import com.stg.szp.models.Task;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,30 +14,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ProjectDetailsDTO {
-    private Long id;
-
+public class MyProjectDTO {
+    private long id;
     private String title;
-
     private String description;
-
-    private UserResponseDTO owner;
-
-    private LocalDateTime createdAt = LocalDateTime.now();
-
     private ProjectStatus status;
-
     private Long proggress;
-
-    private boolean isPrivate;
-
+    private LocalDateTime deadLineAt;
+    private LocalDateTime updatedAt;
     private LocalDateTime startAt;
-
-    private LocalDateTime deadlineAt;
-
+    private List<UserResponseDTO> members;
     private int membersCount;
-    private int tasksCount;
-    // filesCount and commentsCounts needs to be added
-
-
 }
