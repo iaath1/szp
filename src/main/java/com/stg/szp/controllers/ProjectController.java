@@ -5,11 +5,13 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,25 +54,33 @@ public class ProjectController {
     }
 
     @PostMapping
-    public ResponseEntity<ProjectResponseDTO> createProject(@AuthenticationPrincipal SZP_User user,
+    public ResponseEntity<?> createProject(@AuthenticationPrincipal SZP_User user,
             @RequestBody CreateProjectDTO createProjectDTO) {
-        return ResponseEntity
-                .ok(
-                        projectService.createProject(
-                                user, createProjectDTO.getTitle(),
-                                createProjectDTO.getDescription(),
-                                createProjectDTO.isPrivate(),
-                                createProjectDTO.getDeadlineAt(),
-                                createProjectDTO.getStartAt(),
-                                createProjectDTO.getStatus()
-                        ));
+        try {
+            ProjectResponseDTO response = projectService.createProject(
+                    user, createProjectDTO.getTitle(),
+                    createProjectDTO.getProjectKey(),
+                    createProjectDTO.getDescription(),
+                    createProjectDTO.isPrivate(),
+                    createProjectDTO.getDeadlineAt(),
+                    createProjectDTO.getStartAt(),
+                    createProjectDTO.getStatus()
+            );
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
-    @PatchMapping("/edit/{id}")
-    public ResponseEntity<ProjectResponseDTO> editProject(@AuthenticationPrincipal SZP_User user, @PathVariable Long id,
+    @PutMapping("/edit/{projectId}")
+    @PreAuthorize("@projectSecurity.hasAnyRole(principal, #projectId, 'PROJECT_MANAGER')")
+
+    public ResponseEntity<?> editProject(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId,
             @RequestBody EditProjectDTO editProjectDTO) {
         try {
-            return ResponseEntity.ok(projectService.changeProject(user, editProjectDTO, id));
+            return ResponseEntity.ok(projectService.changeProject(user, editProjectDTO, projectId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
@@ -110,9 +120,11 @@ public class ProjectController {
     }
 
     @PostMapping("/{projectId}/members")
+    @PreAuthorize("@projectSecurity.hasAnyRole(principal, #projectId, 'PROJECT_MANAGER')")
+
     public ResponseEntity<?> addNewMemberToProject(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId,
             @RequestBody AddUserToProjectDTO addUserToProjectDTO) {
-        boolean isProjectSaved = projectService.addNewMemberToProject(user, projectId, addUserToProjectDTO.getEmail());
+        boolean isProjectSaved = projectService.addNewMemberToProject(user, projectId, addUserToProjectDTO);
 
         if (isProjectSaved) {
             return new ResponseEntity<>(HttpStatus.OK);
@@ -145,6 +157,15 @@ public class ProjectController {
         }
 
         return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+
+    @GetMapping("/my/{status}")
+    public ResponseEntity<List<MyProjectDTO>> findMyProjectsByStatus(@AuthenticationPrincipal SZP_User user, @PathVariable String status) {
+
+        if(user == null) return new ResponseEntity<>(HttpStatusCode.valueOf(401));
+        List<MyProjectDTO> response = projectService.findUserProjectByStatus(user, status);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
 }

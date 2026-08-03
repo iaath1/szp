@@ -30,4 +30,5 @@ public class CreateTaskDTO {
     private TaskPriority priority;
     private LocalDateTime deadlineAt;
     private String assigneeEmail;
+    private Integer taskSequence;
 }

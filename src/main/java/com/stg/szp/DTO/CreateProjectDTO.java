@@ -17,6 +17,7 @@ import lombok.AllArgsConstructor;
 public class CreateProjectDTO {
     
     private String title;
+    private String projectKey;
     private String description;
     private boolean isPrivate;
     private LocalDateTime startAt;

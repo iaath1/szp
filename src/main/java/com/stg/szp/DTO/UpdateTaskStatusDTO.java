@@ -1,6 +1,6 @@
 package com.stg.szp.DTO;
 
-import com.stg.szp.models.ProjectRole;
+import com.stg.szp.models.TaskStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,9 +9,8 @@ import lombok.NoArgsConstructor;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
 @Builder
-public class AddUserToProjectDTO {
-    private String email;
-    private ProjectRole role;
+@Data
+public class UpdateTaskStatusDTO {
+    private TaskStatus status;
 }

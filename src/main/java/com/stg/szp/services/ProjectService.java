@@ -4,11 +4,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stg.szp.DTO.AddUserToProjectDTO;
 import com.stg.szp.DTO.EditProjectDTO;
 import com.stg.szp.DTO.MyProjectDTO;
+import java.util.Optional;
 import com.stg.szp.DTO.MyProjectsStatsDTO;
 import com.stg.szp.DTO.ProjectDetailsDTO;
 import com.stg.szp.DTO.ProjectResponseDTO;
@@ -17,9 +20,12 @@ import com.stg.szp.DTO.TaskStatusCountDTO;
 import com.stg.szp.DTO.UpcomingTasksDTO;
 import com.stg.szp.DTO.UserResponseDTO;
 import com.stg.szp.models.Project;
+import com.stg.szp.models.ProjectMember;
+import com.stg.szp.models.ProjectRole;
 import com.stg.szp.models.ProjectStatus;
 import com.stg.szp.models.SZP_User;
 import com.stg.szp.models.TaskStatus;
+import com.stg.szp.repos.ProjectMemberRepository;
 import com.stg.szp.repos.ProjectRepository;
 import com.stg.szp.repos.SZP_UserRepository;
 import com.stg.szp.repos.TaskRepository;
@@ -30,11 +36,18 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final SZP_UserRepository userRepository;
     private final TaskRepository taskRepo;
+    private final ProjectMemberRepository projectMemberRepo;
 
-    public ProjectService(ProjectRepository projectRepository, SZP_UserRepository userRepository, TaskRepository taskRepo) {
+    public ProjectService(
+            ProjectRepository projectRepository,
+            SZP_UserRepository userRepository,
+            TaskRepository taskRepo,
+            ProjectMemberRepository projectMemberRepo
+        ) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
         this.taskRepo = taskRepo;
+        this.projectMemberRepo = projectMemberRepo;
     }
 
     @Transactional(readOnly = true)
@@ -45,7 +58,7 @@ public class ProjectService {
                 .title(project.getTitle())
                 .description(project.getDescription())
                 .status(project.getStatus())
-                .proggress(getProjectProgress(project.getId()))
+                .progress(getProjectProgress(project.getId()))
                 .deadLineAt(project.getDeadlineAt())
                 .updatedAt(project.getUpdatedAt())
                 .startAt(project.getStartAt())
@@ -73,12 +86,23 @@ public class ProjectService {
     public ProjectResponseDTO createProject(
             SZP_User user,
             String title,
+            String projectKey,
             String description,
             boolean isPrivate,
             LocalDateTime deadlineAt,
             LocalDateTime startAt,
             ProjectStatus projectStatus
     ) {
+        if (projectKey == null || projectKey.isBlank()) {
+            throw new IllegalArgumentException("Project key is required");
+        }
+
+        String normalizedKey = projectKey.trim().toUpperCase();
+        boolean exists = projectRepository.existsByOwnerIdAndProjectKey(user.getId(), normalizedKey);
+        if (exists) {
+            throw new IllegalArgumentException("Project key must be unique for this user");
+        }
+
         Project project = new Project();
         project.setCreatedAt(LocalDateTime.now());
         project.setOwner(user);
@@ -87,9 +111,16 @@ public class ProjectService {
         project.setDeadlineAt(deadlineAt);
         project.setStartAt(startAt);
         project.setTitle(title);
+        project.setProjectKey(normalizedKey);
         project.setStatus(projectStatus);
 
-        projectRepository.save(project);
+        try {
+            projectRepository.save(project);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("Project key must be unique for this user");
+        }
+
+        projectMemberRepo.save(new ProjectMember(user, project, ProjectRole.PROJECT_MANAGER));
 
         return ProjectResponseDTO.builder()
                 .createdAt(project.getCreatedAt())
@@ -107,10 +138,26 @@ public class ProjectService {
         Project project = projectRepository.findById(projectToBeChangedId)
                 .orElseThrow(() -> new Exception("Project not found"));
 
+        if (editProjectDTO.getProjectKey() != null && !editProjectDTO.getProjectKey().isBlank()) {
+            String normalizedKey = editProjectDTO.getProjectKey().trim().toUpperCase();
+            Optional<Project> existingProject = projectRepository.findByOwnerIdAndProjectKey(user.getId(), normalizedKey);
+            if (existingProject.isPresent() && !existingProject.get().getId().equals(project.getId())) {
+                throw new IllegalArgumentException("Project key must be unique for this user");
+            }
+            project.setProjectKey(normalizedKey);
+        }
+
         project.setTitle(editProjectDTO.getTitle());
         project.setDescription(editProjectDTO.getDescription());
+        project.setStatus(editProjectDTO.getStatus());
+        project.setStartAt(editProjectDTO.getStartAt());
+        project.setDeadlineAt(editProjectDTO.getDeadlineAt());
 
-        projectRepository.save(project);
+        try {
+            projectRepository.save(project);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("Project key must be unique for this user");
+        }
 
         return ProjectResponseDTO.builder()
                 .title(project.getTitle())
@@ -152,7 +199,7 @@ public class ProjectService {
         return null;
     }
 
-    public boolean addNewMemberToProject(SZP_User user, Long projectId, String userEmail) {
+    public boolean addNewMemberToProject(SZP_User user, Long projectId, AddUserToProjectDTO dto) {
         Project project = null;
 
         if (projectRepository.existsById(projectId)) {
@@ -163,14 +210,16 @@ public class ProjectService {
 
         SZP_User userToAdd = null;
 
-        if (userRepository.existsByEmail(userEmail)) {
-            userToAdd = userRepository.findByEmail(userEmail).get();
+        if (userRepository.existsByEmail(dto.getEmail())) {
+            userToAdd = userRepository.findByEmail(dto.getEmail()).get();
         } else {
             return false;
         }
 
         if (!project.getOwner().getId().equals(userToAdd.getId())) {
+            
             project.getMembers().add(userToAdd);
+            projectMemberRepo.save(new ProjectMember(userToAdd, project, dto.getRole()));
             projectRepository.save(project);
             return true;
         }
@@ -236,6 +285,29 @@ public class ProjectService {
                 .build()
         ).toList();
 
+    }
+
+    public List<MyProjectDTO> findUserProjectByStatus(SZP_User user, String status) {
+        ProjectStatus projectStatus = ProjectStatus.valueOf(status.toUpperCase());
+        if(projectStatus == null) {
+            throw new IllegalArgumentException("Project status: " + status + " does not exists.");
+        }
+
+        return projectRepository.findAllByOwnerOrMemberAndStatus(user.getId(), projectStatus).stream().map(
+            project -> 
+            MyProjectDTO.builder()
+            .id(project.getId())
+            .title(project.getTitle())
+            .description(project.getDescription())
+            .status(project.getStatus())
+            .progress(getProjectProgress(project.getId()))
+            .deadLineAt(project.getDeadlineAt())
+            .updatedAt(project.getUpdatedAt())
+            .startAt(project.getStartAt())
+            .members(getProjectMembersWithLimit(project, 3L))
+            .membersCount(project.getMembers().size())
+            .build()
+        ).toList();
     }
 
     private UserResponseDTO mapToUserResponseDTO(SZP_User user) {

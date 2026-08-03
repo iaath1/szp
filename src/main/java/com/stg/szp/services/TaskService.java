@@ -5,6 +5,7 @@ import com.stg.szp.repos.SZP_UserRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +13,7 @@ import com.stg.szp.DTO.CreateTaskDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
 import com.stg.szp.DTO.TaskStatusCountDTO;
 import com.stg.szp.DTO.UpcomingTasksDTO;
+import com.stg.szp.DTO.UpdateTaskStatusDTO;
 import com.stg.szp.models.Project;
 import com.stg.szp.models.SZP_User;
 import com.stg.szp.models.Task;
@@ -62,10 +64,25 @@ public class TaskService {
 
         Project project = projectRepository.findById(projectId).get();
         
-        if(!project.getOwner().getId().equals(user.getId()) || !SZP_UserRepository.existsByEmail(createTaskDTO.getAssigneeEmail())) return null;
+        if(!project.getOwner().getId().equals(user.getId())) return null;
+
+        Integer taskSequence = createTaskDTO.getTaskSequence();
+        if (taskSequence == null) {
+            Integer maxSequence = taskRepository.findMaxTaskSequenceByProjectId(projectId);
+            taskSequence = (maxSequence == null ? 0 : maxSequence) + 1;
+        }
+
+        if (taskRepository.existsByProjectIdAndTaskSequence(projectId, taskSequence)) {
+            throw new IllegalArgumentException("Task sequence must be unique within the project");
+        }
 
         Task task = new Task();
-        task.setAssignee(SZP_UserRepository.findByEmail(createTaskDTO.getAssigneeEmail()).get());
+        if(!createTaskDTO.getAssigneeEmail().isEmpty() || createTaskDTO.getAssigneeEmail() != null) {
+            task.setAssignee(SZP_UserRepository.findByEmail(createTaskDTO.getAssigneeEmail()).get());
+        } else {
+            task.setAssignee(null);
+        }
+
         task.setCreatedAt(LocalDateTime.now());
         task.setUpdatedAt(LocalDateTime.now());
         task.setProject(project);
@@ -74,8 +91,13 @@ public class TaskService {
         task.setStatus(createTaskDTO.getStatus());
         task.setDeadlineAt(createTaskDTO.getDeadlineAt());
         task.setPriority(createTaskDTO.getPriority());
+        task.setTaskSequence(taskSequence);
 
-        task = taskRepository.save(task);
+        try {
+            task = taskRepository.save(task);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("Task sequence must be unique within the project");
+        }
 
         return TaskDetailsDTO.builder()
 
@@ -101,6 +123,13 @@ public class TaskService {
         if(!SZP_UserRepository.existsByEmail(createTaskDTO.getAssigneeEmail())) return null;
         SZP_User userAssignee = SZP_UserRepository.findByEmail(createTaskDTO.getAssigneeEmail()).get();
 
+        if (createTaskDTO.getTaskSequence() != null) {
+            if (taskRepository.existsByProjectIdAndTaskSequence(projectID, createTaskDTO.getTaskSequence())
+                    && !taskRepository.findById(taskId).get().getTaskSequence().equals(createTaskDTO.getTaskSequence())) {
+                throw new IllegalArgumentException("Task sequence must be unique within the project");
+            }
+        }
+
         Task task = taskRepository.findById(taskId).get();
         task.setTitle(createTaskDTO.getTitle());
         task.setDescription(createTaskDTO.getDescription());
@@ -108,9 +137,16 @@ public class TaskService {
         task.setPriority(createTaskDTO.getPriority());
         task.setStatus(createTaskDTO.getStatus());
         task.setUpdatedAt(LocalDateTime.now());
+        if (createTaskDTO.getTaskSequence() != null) {
+            task.setTaskSequence(createTaskDTO.getTaskSequence());
+        }
         
         if(task.getStatus().equals(TaskStatus.DONE)) task.setCompletedAt(LocalDateTime.now());
-        taskRepository.save(task);
+        try {
+            taskRepository.save(task);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("Task sequence must be unique within the project");
+        }
 
         return TaskDetailsDTO.builder()
             .id(task.getId())
@@ -125,6 +161,28 @@ public class TaskService {
 
     }
 
+    public TaskDetailsDTO updateTaskStatus(Long taskId, UpdateTaskStatusDTO statusDto) {
+        
+        if(taskRepository.existsById(taskId)) {
+            Task taskToUpdate = taskRepository.findById(taskId).get();
+            taskToUpdate.setStatus(statusDto.getStatus());
+            taskRepository.save(taskToUpdate);
+
+            return TaskDetailsDTO.builder()
+                .id(taskToUpdate.getId())
+                .assigneeEmail(taskToUpdate.getAssignee().getEmail())
+                .createdAt(taskToUpdate.getCreatedAt())
+                .updatedAt(taskToUpdate.getUpdatedAt())
+                .title(taskToUpdate.getTitle())
+                .description(taskToUpdate.getDescription())
+                .status(taskToUpdate.getStatus())
+                .priority(taskToUpdate.getPriority())
+                .build();
+        }
+
+        return null;
+    }
+
     public boolean deleteTask(SZP_User user, Long projectId, Long taskId) {
         if(!projectRepository.existsById(projectId) || !taskRepository.existsById(taskId)) return false;
 
@@ -133,6 +191,26 @@ public class TaskService {
         taskRepository.delete(taskRepository.findById(taskId).get());
 
         return true;
+    }
+
+    public List<TaskDetailsDTO> getUserTasks(SZP_User user) {
+        List<Task> tasks = taskRepository.findAllByAssigneeId(user.getId());
+
+        return tasks.stream().map(
+            task -> TaskDetailsDTO.builder()
+                .createdAt(task.getCreatedAt())
+                .updatedAt(task.getUpdatedAt())
+                .deadlineAt(task.getDeadlineAt())
+                .assigneeEmail(task.getAssignee().getEmail())
+                .title(task.getTitle())
+                .projectId(task.getProject().getId())
+                .projectTitle(task.getProject().getTitle())
+                .status(task.getStatus())
+                .priority(task.getPriority())
+                .id(task.getId())
+                .description(task.getDescription())
+                .build()
+        ).toList();
     }
 
     public Long getCountAllUserTasks(Long userId) {

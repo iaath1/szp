@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.stg.szp.models.Task;
+import java.util.Optional;
 import com.stg.szp.models.TaskStatus;
 
 @Repository
@@ -18,6 +19,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findTop5ByAssigneeIdOrderByDeadlineAtAsc(Long assigneeId);
     List<Task> findTop5ByProjectIdOrderByDeadlineAtAsc(Long projectId);
     List<Task> findAllByProjectId(Long projectId);
+    boolean existsByProjectIdAndTaskSequence(Long projectId, Integer taskSeq);
+    Integer findMaxTaskSequenceByProjectId(Long projectId);
 
     // own
     List<Task> findByProjectIdAndStatus(Long projectId, TaskStatus status);

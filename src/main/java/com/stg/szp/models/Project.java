@@ -32,7 +32,10 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "projects")
+@Table(
+    name = "projects",
+    uniqueConstraints = @jakarta.persistence.UniqueConstraint(name = "uk_projects_owner_project_key", columnNames = {"owner_id", "project_key"})
+)
 @Data
 @EqualsAndHashCode(of = "id")
 @NoArgsConstructor
@@ -46,6 +49,9 @@ public class Project {
 
     @Column(nullable = false)
     private String title;
+
+    @Column(name = "project_key", nullable = false, length = 20)
+    private String projectKey;
 
     @Column(columnDefinition = "TEXT")
     private String description;

@@ -25,7 +25,10 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "tasks")
+@Table(
+    name = "tasks",
+    uniqueConstraints = @jakarta.persistence.UniqueConstraint(name = "uk_tasks_project_sequence", columnNames = {"project_id", "task_sequence"})
+)
 @Data
 @EqualsAndHashCode(of = "id")
 @NoArgsConstructor
@@ -71,4 +74,10 @@ public class Task {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @ManyToOne
+    private Milestone milestone;
+
+    @Column(name = "task_sequence", nullable = false)
+    private Integer taskSequence;
 }

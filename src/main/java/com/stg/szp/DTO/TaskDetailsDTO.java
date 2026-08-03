@@ -28,6 +28,11 @@ import lombok.NoArgsConstructor;
 public class TaskDetailsDTO {
     private Long id;
     private String title;
+    private String projectTitle;
+
+    // Need to be changed to Project key (e.g WEB-1 or smth)
+    private Long projectId;
+    
     private String description;
     private TaskStatus status;
     private TaskPriority priority;
