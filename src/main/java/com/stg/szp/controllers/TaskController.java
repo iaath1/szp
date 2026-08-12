@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.stg.szp.DTO.CreateTaskDTO;
 import com.stg.szp.DTO.NumberResponseDTO;
 import com.stg.szp.DTO.SubtaskDTO;
+import com.stg.szp.DTO.TaskCommentDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
 import com.stg.szp.DTO.TaskStatusCountDTO;
 import com.stg.szp.DTO.UpcomingTasksDTO;
@@ -174,6 +175,35 @@ public class TaskController {
     @DeleteMapping("/{taskId}/subtasks/{subtaskId}")
     public ResponseEntity<?> deleteSubtask(@PathVariable Long taskId, @PathVariable Long subtaskId) {
         if(taskService.deleteSubtask(taskId, subtaskId)) return new ResponseEntity<>(HttpStatus.OK);
+
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
+    @GetMapping("/{taskId}/comments")
+    public ResponseEntity<List<TaskCommentDTO>> getTaskComments(@PathVariable Long taskId) {
+        List<TaskCommentDTO> response = taskService.getTaskComments(taskId);
+        if(response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/{taskId}/comments")
+    public ResponseEntity<TaskCommentDTO> addCommentToTask(
+            @PathVariable Long taskId,
+            @RequestBody TaskCommentDTO dto,
+            @AuthenticationPrincipal SZP_User user
+        ) {
+
+        TaskCommentDTO response = taskService.addCommentToTask(taskId, dto, user);
+        if(response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{taskId}/comments/{commentId}")
+    public ResponseEntity<?> deleteComment(@PathVariable Long taskId, @PathVariable Long commentId, @AuthenticationPrincipal SZP_User user) {
+        boolean isDeleted = taskService.deleteTaskComment(commentId, user);
+        if(isDeleted) return new ResponseEntity<>(HttpStatus.OK);
 
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }

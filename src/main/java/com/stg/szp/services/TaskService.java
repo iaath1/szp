@@ -2,6 +2,7 @@ package com.stg.szp.services;
 
 import com.stg.szp.repos.SZP_UserRepository;
 import com.stg.szp.repos.SubtaskRepository;
+import com.stg.szp.repos.TaskCommentRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import com.stg.szp.DTO.CreateTaskDTO;
 import com.stg.szp.DTO.SubtaskDTO;
+import com.stg.szp.DTO.TaskCommentDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
 import com.stg.szp.DTO.TaskStatusCountDTO;
 import com.stg.szp.DTO.UpcomingTasksDTO;
@@ -21,7 +23,7 @@ import com.stg.szp.models.Project;
 import com.stg.szp.models.SZP_User;
 import com.stg.szp.models.Subtask;
 import com.stg.szp.models.Task;
-import com.stg.szp.models.TaskPriority;
+import com.stg.szp.models.TaskComment;
 import com.stg.szp.models.TaskStatus;
 import com.stg.szp.repos.ProjectRepository;
 import com.stg.szp.repos.TaskRepository;
@@ -35,12 +37,19 @@ public class TaskService {
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     private final SubtaskRepository subtaskRepo;
+    private final TaskCommentRepository taskCommentRepo;
 
-    public TaskService(TaskRepository taskRepository, ProjectRepository projectRepository, SZP_UserRepository SZP_UserRepository, SubtaskRepository subtaskRepo) {
+    public TaskService(TaskRepository taskRepository,
+        ProjectRepository projectRepository,
+        SZP_UserRepository SZP_UserRepository,
+        SubtaskRepository subtaskRepo,
+        TaskCommentRepository taskCommentRepo
+        ) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
         this.SZP_UserRepository = SZP_UserRepository;
         this.subtaskRepo = subtaskRepo;
+        this.taskCommentRepo = taskCommentRepo;
     }
 
 
@@ -400,6 +409,48 @@ public class TaskService {
         }
 
         return false;
+    }
+
+    public TaskCommentDTO addCommentToTask(Long taskId, TaskCommentDTO dto, SZP_User author) {
+        if(!taskRepository.existsById(taskId) || author == null) return null;
+
+        TaskComment comment = new TaskComment();
+        comment.setAuthor(author);
+        comment.setContent(dto.getContent());
+        comment.setCreatedAt(LocalDateTime.now());
+        comment.setTask(taskRepository.findById(taskId).get());
+
+        return mapTaskCommentToDto(taskCommentRepo.save(comment));
+
+    }
+
+    public List<TaskCommentDTO> getTaskComments(Long taskId) {
+        if(!taskRepository.existsById(taskId)) return null;
+
+        return taskCommentRepo.findAllByTaskIdOrderByCreatedAtAsc(taskId).stream().map(
+            comment -> mapTaskCommentToDto(comment)
+        ).toList();
+    }
+
+    public boolean deleteTaskComment(Long commentId, SZP_User user) {
+        if(!taskCommentRepo.existsById(commentId)) return false;
+
+        TaskComment comment = taskCommentRepo.findById(commentId).get();
+        if(!comment.getAuthor().equals(user)) return false;
+
+        taskCommentRepo.deleteById(commentId);
+        return true;
+    }
+
+    private TaskCommentDTO mapTaskCommentToDto(TaskComment comment) {
+        return TaskCommentDTO.builder()
+            .id(comment.getId())
+            .authorAvatarUrl(comment.getAuthor().getAvatarPath())
+            .authorEmail(comment.getAuthor().getEmail())
+            .authorName(comment.getAuthor().getName() + " " + comment.getAuthor().getSurname())
+            .content(comment.getContent())
+            .createdAt(comment.getCreatedAt())
+            .build();
     }
 
 }
