@@ -25,4 +25,5 @@ public class MyProjectDTO {
     private LocalDateTime startAt;
     private List<UserResponseDTO> members;
     private int membersCount;
+    private List<TagDTO> tags;
 }

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.stg.szp.DTO.CreateTaskDTO;
 import com.stg.szp.DTO.NumberResponseDTO;
+import com.stg.szp.DTO.SubtaskDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
 import com.stg.szp.DTO.TaskStatusCountDTO;
 import com.stg.szp.DTO.UpcomingTasksDTO;
@@ -50,7 +51,7 @@ public class TaskController {
 
     @GetMapping("/my")
     public ResponseEntity<List<TaskDetailsDTO>> getMyTasks(@AuthenticationPrincipal SZP_User user) {
-        if(user == null) return new ResponseEntity<>(HttpStatusCode.valueOf(401));
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
 
         List<TaskDetailsDTO> response = taskService.getUserTasks(user);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -58,9 +59,10 @@ public class TaskController {
 
 
     @PostMapping("/{projectId}")
-    @PreAuthorize("@projectSecurity.hasAnyRole(principal, #projectId, 'PROJECT_MANAGER', 'DEVELOPER')")
+    @PreAuthorize("@projectSecurity.hasAnyRole(principal, #projectId, 'PROJECT_MANAGER', 'DEVELOPER', 'OWNER')")
     
     public ResponseEntity<?> createTask(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId, @RequestBody CreateTaskDTO createTaskDTO) {
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         try {
             TaskDetailsDTO response = taskService.createTask(user, projectId, createTaskDTO);
             return new ResponseEntity<>(response, HttpStatus.OK);
@@ -71,11 +73,12 @@ public class TaskController {
     }
 
     @PutMapping("/{projectId}/{taskId}")
-    @PreAuthorize("@projectSecurity.hasAnyRole(principal, #projectId, 'PROJECT_MANAGER', 'DEVELOPER', 'DESIGNER', 'QA_ENGINEER')")
+    @PreAuthorize("@projectSecurity.hasAnyRole(principal, #projectId, 'PROJECT_MANAGER', 'DEVELOPER', 'DESIGNER', 'QA_ENGINEER', 'OWNER')")
 
     public ResponseEntity<?> updateTask(@AuthenticationPrincipal SZP_User user,
         @PathVariable Long projectId, @PathVariable Long taskId, @RequestBody CreateTaskDTO createTaskDTO
     ) {
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         try {
             TaskDetailsDTO response = taskService.updateTask(user, projectId, taskId, createTaskDTO);
             return new ResponseEntity<>(response, HttpStatus.OK);
@@ -85,9 +88,10 @@ public class TaskController {
     }
 
     @PatchMapping("/{taskId}/status")
-    @PreAuthorize("@projectSecurity.hasAnyRole(principal, #projectId, 'PROJECT_MANAGER', 'DEVELOPER', 'DESIGNER', 'QA_ENGINEER')")
+    @PreAuthorize("@projectSecurity.hasAnyRole(principal, #projectId, 'PROJECT_MANAGER', 'DEVELOPER', 'DESIGNER', 'QA_ENGINEER', 'OWNER')")
 
     public ResponseEntity<TaskDetailsDTO> updateTaskSttaus(@PathVariable Long taskId, @RequestBody UpdateTaskStatusDTO statusDto, @AuthenticationPrincipal SZP_User user) {
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         TaskDetailsDTO response = taskService.updateTaskStatus(taskId, statusDto);
 
         if(response == null) return new ResponseEntity<>(HttpStatusCode.valueOf(404));
@@ -95,15 +99,31 @@ public class TaskController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PostMapping("/{taskId}/attachments")
+    public ResponseEntity<TaskDetailsDTO> addAttachment(@PathVariable Long taskId, @RequestBody String fileUrl) {
+        TaskDetailsDTO response = taskService.addAttachment(taskId, fileUrl);
+        if(response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{taskId}/attachments")
+    public ResponseEntity<TaskDetailsDTO> removeAttachment(@PathVariable Long taskId, @RequestBody String fileUrl) {
+        TaskDetailsDTO response = taskService.removeAttachment(taskId, fileUrl);
+        if(response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
     @DeleteMapping("/{projectId}/{taskId}")
-    @PreAuthorize("@projectSecurity.hasAnyRole(principal, #projectId, 'PROJECT_MANAGER', 'DEVELOPER')")
+    @PreAuthorize("@projectSecurity.hasAnyRole(principal, #projectId, 'PROJECT_MANAGER', 'DEVELOPER', 'OWNER')")
     public ResponseEntity<?> deleteTask(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId, @PathVariable Long taskId) {
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         if(taskService.deleteTask(user, projectId, taskId)) return new ResponseEntity<>(HttpStatus.OK);
         return new ResponseEntity<>(HttpStatus.FORBIDDEN);
     }
 
     @GetMapping("/count")
     public ResponseEntity<NumberResponseDTO> getCountAllUserTasks(@AuthenticationPrincipal SZP_User user) {
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         NumberResponseDTO response = new NumberResponseDTO(taskService.getCountAllUserTasks(user.getId()));
 
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -111,6 +131,7 @@ public class TaskController {
 
     @GetMapping("/count-by-statuses")
     public ResponseEntity<TaskStatusCountDTO> getCountAllUserTasksByStatuses(@AuthenticationPrincipal SZP_User user) {
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         TaskStatusCountDTO response = taskService.getCountAllUserTasksByStatuses(user.getId());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -118,8 +139,43 @@ public class TaskController {
 
     @GetMapping("/upcoming")
     public ResponseEntity<List<UpcomingTasksDTO>> getUpcomingTasks(@AuthenticationPrincipal SZP_User user) {
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         List<UpcomingTasksDTO> tasks = taskService.getTasksOrderedByDeadline(user);
 
         return new ResponseEntity<>(tasks, HttpStatus.OK);
     }
+
+    @GetMapping("/my/{status}")
+    public ResponseEntity<List<TaskDetailsDTO>> getTasksByStatus(@AuthenticationPrincipal SZP_User user, @PathVariable TaskStatus status) {
+        if (user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        List<TaskDetailsDTO> response = taskService.getUserTasksByStatus(user, status);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/{taskId}/subtasks")
+    public ResponseEntity<SubtaskDTO> createSubtask(@PathVariable Long taskId, @RequestBody SubtaskDTO dto) {
+        SubtaskDTO response = taskService.createSubtask(taskId, dto);
+        if (response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+
+    }
+
+    @PatchMapping("/{taskId}/subtasks/{subtaskId}")
+    public ResponseEntity<SubtaskDTO> updateSubtask(@PathVariable Long taskId, @PathVariable Long subtaskId, @RequestBody SubtaskDTO dto) {
+        SubtaskDTO response = taskService.updateSubtask(taskId, subtaskId, dto);
+
+        if (response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{taskId}/subtasks/{subtaskId}")
+    public ResponseEntity<?> deleteSubtask(@PathVariable Long taskId, @PathVariable Long subtaskId) {
+        if(taskService.deleteSubtask(taskId, subtaskId)) return new ResponseEntity<>(HttpStatus.OK);
+
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+    
 }

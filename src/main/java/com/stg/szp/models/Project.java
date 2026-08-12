@@ -79,6 +79,9 @@ public class Project {
 
     private boolean isPrivate;
 
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Tag> tags = new ArrayList<>();
+
     @ManyToMany
     @JoinTable(
         name = "project_members",

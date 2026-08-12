@@ -1,6 +1,7 @@
 package com.stg.szp.DTO;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.stg.szp.models.Project;
@@ -40,4 +41,6 @@ public class TaskDetailsDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deadlineAt;
+    private List<String> attachments;
+    private List<SubtaskDTO> subtasks;
 }

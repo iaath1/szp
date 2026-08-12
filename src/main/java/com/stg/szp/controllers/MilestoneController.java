@@ -38,7 +38,7 @@ public class MilestoneController {
 
     @PostMapping
     public ResponseEntity<MilestoneDTO> createMilestone(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId, @RequestBody MilestoneDTO dto) {
-        if(user == null) return new ResponseEntity<>(HttpStatusCode.valueOf(401));
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
 
         MilestoneDTO response = milestoneService.createMilestone(projectId, dto);
 

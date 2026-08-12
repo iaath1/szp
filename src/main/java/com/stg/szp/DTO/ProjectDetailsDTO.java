@@ -41,6 +41,7 @@ public class ProjectDetailsDTO {
 
     private int membersCount;
     private int tasksCount;
+    private List<TagDTO> tags;
     // filesCount and commentsCounts needs to be added
 
 

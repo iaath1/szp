@@ -1,6 +1,7 @@
 package com.stg.szp.DTO;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.stg.szp.models.ProjectStatus;
 
@@ -22,4 +23,5 @@ public class ProjectResponseDTO {
     private boolean isPrivate;
     private LocalDateTime startAt;
     private LocalDateTime deadlineAt;
+    private List<TagDTO> tags;
 }

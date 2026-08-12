@@ -15,15 +15,18 @@ import java.util.Optional;
 import com.stg.szp.DTO.MyProjectsStatsDTO;
 import com.stg.szp.DTO.ProjectDetailsDTO;
 import com.stg.szp.DTO.ProjectResponseDTO;
+import com.stg.szp.DTO.TagDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
 import com.stg.szp.DTO.TaskStatusCountDTO;
 import com.stg.szp.DTO.UpcomingTasksDTO;
 import com.stg.szp.DTO.UserResponseDTO;
+import com.stg.szp.DTO.SubtaskDTO;
 import com.stg.szp.models.Project;
 import com.stg.szp.models.ProjectMember;
 import com.stg.szp.models.ProjectRole;
 import com.stg.szp.models.ProjectStatus;
 import com.stg.szp.models.SZP_User;
+import com.stg.szp.models.Tag;
 import com.stg.szp.models.TaskStatus;
 import com.stg.szp.repos.ProjectMemberRepository;
 import com.stg.szp.repos.ProjectRepository;
@@ -120,13 +123,13 @@ public class ProjectService {
             throw new IllegalArgumentException("Project key must be unique for this user");
         }
 
-        projectMemberRepo.save(new ProjectMember(user, project, ProjectRole.PROJECT_MANAGER));
+        projectMemberRepo.save(new ProjectMember(user, project, ProjectRole.OWNER));
 
         return ProjectResponseDTO.builder()
                 .createdAt(project.getCreatedAt())
                 .description(description)
                 .title(title)
-                .owner(mapToUserResponseDTO(user))
+                .owner(mapToUserResponseDTO(user, project))
                 .status(project.getStatus())
                 .isPrivate(project.isPrivate())
                 .deadlineAt(deadlineAt)
@@ -152,6 +155,7 @@ public class ProjectService {
         project.setStatus(editProjectDTO.getStatus());
         project.setStartAt(editProjectDTO.getStartAt());
         project.setDeadlineAt(editProjectDTO.getDeadlineAt());
+        project.setTags(editProjectDTO.getTags());
 
         try {
             projectRepository.save(project);
@@ -162,11 +166,12 @@ public class ProjectService {
         return ProjectResponseDTO.builder()
                 .title(project.getTitle())
                 .description(project.getDescription())
-                .owner(mapToUserResponseDTO(project.getOwner()))
+                .owner(mapToUserResponseDTO(project.getOwner(), project))
                 .createdAt(project.getCreatedAt())
                 .status(project.getStatus())
                 .startAt(project.getStartAt())
                 .deadlineAt(project.getDeadlineAt())
+                .tags(mapTagDTO(project))
                 .build();
     }
 
@@ -184,7 +189,7 @@ public class ProjectService {
                         .title(project.getTitle())
                         .description(project.getDescription())
                         .createdAt(project.getCreatedAt())
-                        .owner(mapToUserResponseDTO(project.getOwner()))
+                        .owner(mapToUserResponseDTO(project.getOwner(), project))
                         .proggress(getProjectProgress(id))
                         .membersCount(project.getMembers().size())
                         .tasksCount(project.getTasks().size())
@@ -192,6 +197,7 @@ public class ProjectService {
                         .isPrivate(project.isPrivate())
                         .deadlineAt(project.getDeadlineAt())
                         .startAt(project.getStartAt())
+                        .tags(mapTagDTO(project))
                         .build();
             }
         }
@@ -231,6 +237,7 @@ public class ProjectService {
         return projectRepository.countByMembers_Id(userId);
     }
 
+    @Transactional
     public List<UserResponseDTO> getProjectMembers(Long projectId) {
         Project project = projectRepository.findById(projectId).get();
 
@@ -239,7 +246,7 @@ public class ProjectService {
                 project.getMembers().stream() // Второй стрим (из участников)
         )
                 .distinct() // Убираем дубликаты (например, если owner есть в members)
-                .map(this::mapToUserResponseDTO) // Конвертируем в DTO
+                .map(member -> mapToUserResponseDTO(member, project)) // Конвертируем в DTO
                 .toList();                         // Собираем в список
     }
 
@@ -282,9 +289,10 @@ public class ProjectService {
                 .title(task.getTitle())
                 .status(task.getStatus())
                 .updatedAt(task.getUpdatedAt())
+                .attachments(task.getAttachments())
+                .subtasks(mapTaskSubtasksToDto(task))
                 .build()
         ).toList();
-
     }
 
     public List<MyProjectDTO> findUserProjectByStatus(SZP_User user, String status) {
@@ -306,20 +314,31 @@ public class ProjectService {
             .startAt(project.getStartAt())
             .members(getProjectMembersWithLimit(project, 3L))
             .membersCount(project.getMembers().size())
+            .tags(mapTagDTO(project))
             .build()
         ).toList();
     }
 
-    private UserResponseDTO mapToUserResponseDTO(SZP_User user) {
+    private UserResponseDTO mapToUserResponseDTO(SZP_User user, Project project) {
         if (user == null) {
             return null;
         }
+        ProjectRole userProjectRole = null;
+
+        if (project != null) {
+            userProjectRole = projectMemberRepo
+                .findByUserIdAndProjectId(user.getId(), project.getId())
+                .map(ProjectMember::getRole)
+                .orElse(null);
+        }
+
         return UserResponseDTO.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .name(user.getName())
                 .surname(user.getSurname())
                 .avatarUrl(user.getAvatarPath())
+                .projectRole(userProjectRole)
                 .build();
     }
 
@@ -350,7 +369,29 @@ public class ProjectService {
 
     private List<UserResponseDTO> getProjectMembersWithLimit(Project project, Long limit) {
         return project.getMembers().stream().map((SZP_User user) -> {
-            return mapToUserResponseDTO(user);
+            return mapToUserResponseDTO(user, project);
         }).limit(limit).toList();
+    }
+
+    private List<TagDTO> mapTagDTO(Project project) {
+        return project.getTags().stream().map(
+            (tag) -> TagDTO.builder()
+                .id(tag.getId())
+                .name(tag.getName())
+                .colorHex(tag.getColorHex())
+                .build()
+        ).toList();
+    }
+
+    private List<SubtaskDTO> mapTaskSubtasksToDto(com.stg.szp.models.Task task) {
+        if (task.getSubtasks() == null) return new java.util.ArrayList<>();
+
+        return task.getSubtasks().stream().map(
+            subtask -> SubtaskDTO.builder()
+                .id(subtask.getId())
+                .title(subtask.getTitle())
+                .isCompleted(subtask.isCompleted())
+                .build()
+        ).toList();
     }
 }

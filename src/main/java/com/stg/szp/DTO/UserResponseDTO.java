@@ -1,5 +1,7 @@
 package com.stg.szp.DTO;
 
+import com.stg.szp.models.ProjectRole;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,4 +17,5 @@ public class UserResponseDTO {
     private String name;
     private String surname;
     private String avatarUrl;
+    private ProjectRole projectRole;
 }

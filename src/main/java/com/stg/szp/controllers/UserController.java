@@ -26,12 +26,8 @@ public class UserController {
 
     @GetMapping("/suggested/{projectId}")
     public ResponseEntity<List<UserResponseDTO>> getSuggestedUsers(@AuthenticationPrincipal SZP_User user, @PathVariable Long projectId) {
-        
-        if(user != null) {
-            List<UserResponseDTO> response = userService.getSuggestedUsers(user, projectId);
-            return new ResponseEntity<>(response, HttpStatus.OK);
-        }
-
-        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        List<UserResponseDTO> response = userService.getSuggestedUsers(user, projectId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

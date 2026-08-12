@@ -1,8 +1,10 @@
 package com.stg.szp.services;
 
 import com.stg.szp.repos.SZP_UserRepository;
+import com.stg.szp.repos.SubtaskRepository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -10,12 +12,14 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.stg.szp.DTO.CreateTaskDTO;
+import com.stg.szp.DTO.SubtaskDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
 import com.stg.szp.DTO.TaskStatusCountDTO;
 import com.stg.szp.DTO.UpcomingTasksDTO;
 import com.stg.szp.DTO.UpdateTaskStatusDTO;
 import com.stg.szp.models.Project;
 import com.stg.szp.models.SZP_User;
+import com.stg.szp.models.Subtask;
 import com.stg.szp.models.Task;
 import com.stg.szp.models.TaskPriority;
 import com.stg.szp.models.TaskStatus;
@@ -30,11 +34,13 @@ public class TaskService {
     private final SZP_UserRepository SZP_UserRepository;
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
+    private final SubtaskRepository subtaskRepo;
 
-    public TaskService(TaskRepository taskRepository, ProjectRepository projectRepository, SZP_UserRepository SZP_UserRepository) {
+    public TaskService(TaskRepository taskRepository, ProjectRepository projectRepository, SZP_UserRepository SZP_UserRepository, SubtaskRepository subtaskRepo) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
         this.SZP_UserRepository = SZP_UserRepository;
+        this.subtaskRepo = subtaskRepo;
     }
 
 
@@ -110,6 +116,8 @@ public class TaskService {
             .status(task.getStatus())
             .priority(task.getPriority())
             .deadlineAt(task.getDeadlineAt())
+            .attachments(task.getAttachments())
+            .subtasks(mapTaskSubtasksToDto(task))
             .build();
 
     }
@@ -157,6 +165,8 @@ public class TaskService {
             .description(task.getDescription())
             .status(task.getStatus())
             .priority(task.getPriority())
+            .attachments(task.getAttachments())
+            .subtasks(mapTaskSubtasksToDto(task))
             .build();
 
     }
@@ -177,9 +187,55 @@ public class TaskService {
                 .description(taskToUpdate.getDescription())
                 .status(taskToUpdate.getStatus())
                 .priority(taskToUpdate.getPriority())
+                .attachments(taskToUpdate.getAttachments())
+                .subtasks(mapTaskSubtasksToDto(taskToUpdate))
                 .build();
         }
 
+        return null;
+    }
+
+    public TaskDetailsDTO addAttachment(Long taskId, String fileUrl) {
+        if(taskRepository.existsById(taskId)) {
+            Task taskToUpdate = taskRepository.findById(taskId).get();
+            taskToUpdate.getAttachments().add(fileUrl);
+            taskRepository.save(taskToUpdate);
+
+            return TaskDetailsDTO.builder()
+                .id(taskToUpdate.getId())
+                .assigneeEmail(taskToUpdate.getAssignee() != null ? taskToUpdate.getAssignee().getEmail() : null)
+                .createdAt(taskToUpdate.getCreatedAt())
+                .updatedAt(taskToUpdate.getUpdatedAt())
+                .title(taskToUpdate.getTitle())
+                .description(taskToUpdate.getDescription())
+                .status(taskToUpdate.getStatus())
+                .priority(taskToUpdate.getPriority())
+                .attachments(taskToUpdate.getAttachments())
+                .subtasks(mapTaskSubtasksToDto(taskToUpdate))
+                .build();
+        }
+        return null;
+    }
+
+    public TaskDetailsDTO removeAttachment(Long taskId, String fileUrl) {
+        if(taskRepository.existsById(taskId)) {
+            Task taskToUpdate = taskRepository.findById(taskId).get();
+            taskToUpdate.getAttachments().remove(fileUrl);
+            taskRepository.save(taskToUpdate);
+
+            return TaskDetailsDTO.builder()
+                .id(taskToUpdate.getId())
+                .assigneeEmail(taskToUpdate.getAssignee() != null ? taskToUpdate.getAssignee().getEmail() : null)
+                .createdAt(taskToUpdate.getCreatedAt())
+                .updatedAt(taskToUpdate.getUpdatedAt())
+                .title(taskToUpdate.getTitle())
+                .description(taskToUpdate.getDescription())
+                .status(taskToUpdate.getStatus())
+                .priority(taskToUpdate.getPriority())
+                .attachments(taskToUpdate.getAttachments())
+                .subtasks(mapTaskSubtasksToDto(taskToUpdate))
+                .build();
+        }
         return null;
     }
 
@@ -209,6 +265,8 @@ public class TaskService {
                 .priority(task.getPriority())
                 .id(task.getId())
                 .description(task.getDescription())
+                .attachments(task.getAttachments())
+                .subtasks(mapTaskSubtasksToDto(task))
                 .build()
         ).toList();
     }
@@ -240,6 +298,26 @@ public class TaskService {
         
     }
 
+    public List<TaskDetailsDTO> getUserTasksByStatus(SZP_User user, TaskStatus status) {
+        return taskRepository.findAllByAssigneeIdAndStatus(user.getId(), status).stream().map(
+            task -> TaskDetailsDTO.builder()
+                .id(task.getId())
+                .assigneeEmail(task.getAssignee().getEmail())
+                .createdAt(task.getCreatedAt())
+                .updatedAt(task.getUpdatedAt())
+                .deadlineAt(task.getDeadlineAt())
+                .title(task.getTitle())
+                .projectId(task.getProject().getId())
+                .projectTitle(task.getProject().getTitle())
+                .priority(task.getPriority())
+                .status(task.getStatus())
+                .description(task.getDescription())
+                .attachments(task.getAttachments())
+                .subtasks(mapTaskSubtasksToDto(task))
+                .build()
+        ).toList();
+    }
+
     @Transactional
     private void refreshOverdueStatuses() {
         LocalDateTime currentDate = LocalDateTime.now();
@@ -258,6 +336,70 @@ public class TaskService {
     @Scheduled(fixedRate = 60000)
     public void updateOverdueTasks() {
         refreshOverdueStatuses();
+    }
+
+    private List<SubtaskDTO> mapTaskSubtasksToDto(Task task) {
+        if (task.getSubtasks() == null) return new ArrayList<>();
+
+        return task.getSubtasks().stream().map(
+            subtask -> SubtaskDTO.builder()
+                .id(subtask.getId())
+                .title(subtask.getTitle())
+                .isCompleted(subtask.isCompleted())
+                .build()
+        ).toList();
+    }
+
+    private SubtaskDTO mapSubtaskToDTO(Subtask subtask) {
+        return SubtaskDTO.builder()
+            .id(subtask.getId())
+            .title(subtask.getTitle())
+            .isCompleted(subtask.isCompleted())
+            .build();
+    }
+
+    public SubtaskDTO createSubtask(Long taskId, SubtaskDTO dto) {
+        if(taskRepository.findById(taskId).isEmpty()) return null;
+
+        Task task = taskRepository.findById(taskId).get();
+        Subtask subtask = new Subtask();
+        subtask.setTitle(dto.getTitle());
+        subtask.setCompleted(false);
+        subtask.setTask(task);
+
+        Subtask saved = subtaskRepo.save(subtask);
+
+        return mapSubtaskToDTO(saved);
+    }
+
+    public SubtaskDTO updateSubtask(Long taskId, Long subtaskId, SubtaskDTO dto) {
+        if(!taskRepository.existsById(taskId) || !subtaskRepo.existsById(subtaskId)) return null;
+
+        Subtask subtask = subtaskRepo.findById(subtaskId).get();
+        subtask.setTitle(dto.getTitle());
+        subtask.setCompleted(dto.isCompleted());
+        
+        return mapSubtaskToDTO(subtaskRepo.save(subtask));
+    }
+
+    // need to be added verification is subtask assigned to task. It need to be added to all similar methods
+    @Transactional
+    public boolean deleteSubtask(Long taskId, Long subtaskId) {
+        if (taskRepository.existsById(taskId) && subtaskRepo.existsById(subtaskId)) {
+            Task task = taskRepository.findById(taskId).get();
+            Subtask subtask = subtaskRepo.findById(subtaskId).get();
+            
+            // Ensure the subtask belongs to this task
+            if (subtask.getTask().getId().equals(taskId)) {
+                task.getSubtasks().remove(subtask);
+                taskRepository.save(task);
+                // Due to orphanRemoval=true, removing it from the list and saving the task 
+                // will automatically delete it from the database.
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }
