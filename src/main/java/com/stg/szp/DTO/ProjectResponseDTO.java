@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.stg.szp.models.ProjectStatus;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +21,7 @@ public class ProjectResponseDTO {
     private LocalDateTime createdAt;
     private UserResponseDTO owner;
     private ProjectStatus status;
+    @JsonProperty("isPrivate")
     private boolean isPrivate;
     private LocalDateTime startAt;
     private LocalDateTime deadlineAt;

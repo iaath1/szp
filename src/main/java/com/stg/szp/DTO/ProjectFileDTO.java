@@ -18,4 +18,7 @@ public class ProjectFileDTO {
     private String type;
     private LocalDateTime uploadDate;
     private String uploaderName;
+    private Long taskId;
+    private String taskTitle;
+    private String fileUrl;
 }

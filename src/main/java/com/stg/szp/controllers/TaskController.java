@@ -1,6 +1,7 @@
 package com.stg.szp.controllers;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.stg.szp.DTO.CreateTaskDTO;
@@ -100,16 +102,16 @@ public class TaskController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PostMapping("/{taskId}/attachments")
-    public ResponseEntity<TaskDetailsDTO> addAttachment(@PathVariable Long taskId, @RequestBody String fileUrl) {
-        TaskDetailsDTO response = taskService.addAttachment(taskId, fileUrl);
+    @PostMapping("/{taskId}/attachments/{fileId}")
+    public ResponseEntity<TaskDetailsDTO> addAttachment(@PathVariable Long taskId, @PathVariable Long fileId) {
+        TaskDetailsDTO response = taskService.addAttachment(taskId, fileId);
         if(response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @DeleteMapping("/{taskId}/attachments")
-    public ResponseEntity<TaskDetailsDTO> removeAttachment(@PathVariable Long taskId, @RequestBody String fileUrl) {
-        TaskDetailsDTO response = taskService.removeAttachment(taskId, fileUrl);
+    @DeleteMapping("/{taskId}/attachments/{fileId}")
+    public ResponseEntity<TaskDetailsDTO> removeAttachment(@PathVariable Long taskId, @PathVariable Long fileId) {
+        TaskDetailsDTO response = taskService.removeAttachment(taskId, fileId);
         if(response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -208,4 +210,13 @@ public class TaskController {
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
     
+    @GetMapping("/velocity")
+    public ResponseEntity<List<Map<String, Object>>> getTaskVelocity(@AuthenticationPrincipal SZP_User user, 
+        @RequestParam(defaultValue = "30") int days
+    ) {
+
+        List<Map<String, Object>> res = taskService.getTaskVelocityChart(user.getId(), days);
+
+        return new ResponseEntity<>(res, HttpStatus.OK);
+    }
 }

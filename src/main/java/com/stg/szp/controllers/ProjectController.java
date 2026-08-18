@@ -23,6 +23,7 @@ import com.stg.szp.DTO.MyProjectDTO;
 import com.stg.szp.DTO.MyProjectsStatsDTO;
 import com.stg.szp.DTO.NumberResponseDTO;
 import com.stg.szp.DTO.ProjectDetailsDTO;
+import com.stg.szp.DTO.ProjectFileDTO;
 import com.stg.szp.DTO.ProjectResponseDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
 import com.stg.szp.DTO.TaskStatusCountDTO;
@@ -167,6 +168,15 @@ public class ProjectController {
 
         if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         List<MyProjectDTO> response = projectService.findUserProjectByStatus(user, status);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/{projectId}/files")
+    public ResponseEntity<List<ProjectFileDTO>> getProjectFiles(@PathVariable Long projectId) {
+        List<ProjectFileDTO> response = projectService.getProjectFiles(projectId);
+
+        if(response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

@@ -4,15 +4,20 @@ import com.stg.szp.repos.SZP_UserRepository;
 import com.stg.szp.repos.SubtaskRepository;
 import com.stg.szp.repos.TaskCommentRepository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.stg.szp.DTO.CreateTaskDTO;
+import com.stg.szp.DTO.ProjectFileDTO;
 import com.stg.szp.DTO.SubtaskDTO;
 import com.stg.szp.DTO.TaskCommentDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
@@ -20,11 +25,13 @@ import com.stg.szp.DTO.TaskStatusCountDTO;
 import com.stg.szp.DTO.UpcomingTasksDTO;
 import com.stg.szp.DTO.UpdateTaskStatusDTO;
 import com.stg.szp.models.Project;
+import com.stg.szp.models.ProjectFile;
 import com.stg.szp.models.SZP_User;
 import com.stg.szp.models.Subtask;
 import com.stg.szp.models.Task;
 import com.stg.szp.models.TaskComment;
 import com.stg.szp.models.TaskStatus;
+import com.stg.szp.repos.ProjectFileRepository;
 import com.stg.szp.repos.ProjectRepository;
 import com.stg.szp.repos.TaskRepository;
 
@@ -38,18 +45,21 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final SubtaskRepository subtaskRepo;
     private final TaskCommentRepository taskCommentRepo;
+    private final ProjectFileRepository projectFileRepo;
 
     public TaskService(TaskRepository taskRepository,
         ProjectRepository projectRepository,
         SZP_UserRepository SZP_UserRepository,
         SubtaskRepository subtaskRepo,
-        TaskCommentRepository taskCommentRepo
+        TaskCommentRepository taskCommentRepo,
+        ProjectFileRepository projectFileRepo
         ) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
         this.SZP_UserRepository = SZP_UserRepository;
         this.subtaskRepo = subtaskRepo;
         this.taskCommentRepo = taskCommentRepo;
+        this.projectFileRepo = projectFileRepo;
     }
 
 
@@ -92,8 +102,8 @@ public class TaskService {
         }
 
         Task task = new Task();
-        if(!createTaskDTO.getAssigneeEmail().isEmpty() || createTaskDTO.getAssigneeEmail() != null) {
-            task.setAssignee(SZP_UserRepository.findByEmail(createTaskDTO.getAssigneeEmail()).get());
+        if (createTaskDTO.getAssigneeEmail() != null && !createTaskDTO.getAssigneeEmail().trim().isEmpty()) {
+            task.setAssignee(SZP_UserRepository.findByEmail(createTaskDTO.getAssigneeEmail()).orElse(null));
         } else {
             task.setAssignee(null);
         }
@@ -125,7 +135,7 @@ public class TaskService {
             .status(task.getStatus())
             .priority(task.getPriority())
             .deadlineAt(task.getDeadlineAt())
-            .attachments(task.getAttachments())
+            .attachments(mapAttachmentsToListDto(task.getAttachments()))
             .subtasks(mapTaskSubtasksToDto(task))
             .build();
 
@@ -137,8 +147,11 @@ public class TaskService {
         Project project = projectRepository.findById(projectID).get();
         if(!project.getOwner().getId().equals(user.getId())) return null;
 
-        if(!SZP_UserRepository.existsByEmail(createTaskDTO.getAssigneeEmail())) return null;
-        SZP_User userAssignee = SZP_UserRepository.findByEmail(createTaskDTO.getAssigneeEmail()).get();
+        SZP_User userAssignee = null;
+        if (createTaskDTO.getAssigneeEmail() != null && !createTaskDTO.getAssigneeEmail().trim().isEmpty()) {
+            if(!SZP_UserRepository.existsByEmail(createTaskDTO.getAssigneeEmail())) return null;
+            userAssignee = SZP_UserRepository.findByEmail(createTaskDTO.getAssigneeEmail()).get();
+        }
 
         if (createTaskDTO.getTaskSequence() != null) {
             if (taskRepository.existsByProjectIdAndTaskSequence(projectID, createTaskDTO.getTaskSequence())
@@ -174,7 +187,7 @@ public class TaskService {
             .description(task.getDescription())
             .status(task.getStatus())
             .priority(task.getPriority())
-            .attachments(task.getAttachments())
+            .attachments(mapAttachmentsToListDto(task.getAttachments()))
             .subtasks(mapTaskSubtasksToDto(task))
             .build();
 
@@ -185,6 +198,8 @@ public class TaskService {
         if(taskRepository.existsById(taskId)) {
             Task taskToUpdate = taskRepository.findById(taskId).get();
             taskToUpdate.setStatus(statusDto.getStatus());
+
+            if(taskToUpdate.getStatus().equals(TaskStatus.DONE)) taskToUpdate.setCompletedAt(LocalDateTime.now());
             taskRepository.save(taskToUpdate);
 
             return TaskDetailsDTO.builder()
@@ -196,7 +211,7 @@ public class TaskService {
                 .description(taskToUpdate.getDescription())
                 .status(taskToUpdate.getStatus())
                 .priority(taskToUpdate.getPriority())
-                .attachments(taskToUpdate.getAttachments())
+                .attachments(mapAttachmentsToListDto(taskToUpdate.getAttachments()))
                 .subtasks(mapTaskSubtasksToDto(taskToUpdate))
                 .build();
         }
@@ -204,11 +219,17 @@ public class TaskService {
         return null;
     }
 
-    public TaskDetailsDTO addAttachment(Long taskId, String fileUrl) {
-        if(taskRepository.existsById(taskId)) {
+    @Transactional
+    public TaskDetailsDTO addAttachment(Long taskId, Long fileId) {
+        if(taskRepository.existsById(taskId) && projectFileRepo.existsById(fileId)) {
             Task taskToUpdate = taskRepository.findById(taskId).get();
-            taskToUpdate.getAttachments().add(fileUrl);
-            taskRepository.save(taskToUpdate);
+            ProjectFile file = projectFileRepo.findById(fileId).get();
+
+            file.setTask(taskToUpdate);
+            projectFileRepo.save(file);
+            
+            // refresh task attachments list if necessary
+            taskToUpdate.getAttachments().add(file);
 
             return TaskDetailsDTO.builder()
                 .id(taskToUpdate.getId())
@@ -219,18 +240,23 @@ public class TaskService {
                 .description(taskToUpdate.getDescription())
                 .status(taskToUpdate.getStatus())
                 .priority(taskToUpdate.getPriority())
-                .attachments(taskToUpdate.getAttachments())
+                .attachments(mapAttachmentsToListDto(taskToUpdate.getAttachments()))
                 .subtasks(mapTaskSubtasksToDto(taskToUpdate))
                 .build();
         }
         return null;
     }
 
-    public TaskDetailsDTO removeAttachment(Long taskId, String fileUrl) {
-        if(taskRepository.existsById(taskId)) {
+    @Transactional
+    public TaskDetailsDTO removeAttachment(Long taskId, Long fileId) {
+        if(taskRepository.existsById(taskId) && projectFileRepo.existsById(fileId)) {
             Task taskToUpdate = taskRepository.findById(taskId).get();
-            taskToUpdate.getAttachments().remove(fileUrl);
-            taskRepository.save(taskToUpdate);
+            ProjectFile file = projectFileRepo.findById(fileId).get();
+
+            file.setTask(null);
+            projectFileRepo.save(file);
+            
+            taskToUpdate.getAttachments().remove(file);
 
             return TaskDetailsDTO.builder()
                 .id(taskToUpdate.getId())
@@ -241,7 +267,7 @@ public class TaskService {
                 .description(taskToUpdate.getDescription())
                 .status(taskToUpdate.getStatus())
                 .priority(taskToUpdate.getPriority())
-                .attachments(taskToUpdate.getAttachments())
+                .attachments(mapAttachmentsToListDto(taskToUpdate.getAttachments()))
                 .subtasks(mapTaskSubtasksToDto(taskToUpdate))
                 .build();
         }
@@ -274,7 +300,7 @@ public class TaskService {
                 .priority(task.getPriority())
                 .id(task.getId())
                 .description(task.getDescription())
-                .attachments(task.getAttachments())
+                .attachments(mapAttachmentsToListDto(task.getAttachments()))
                 .subtasks(mapTaskSubtasksToDto(task))
                 .build()
         ).toList();
@@ -321,7 +347,8 @@ public class TaskService {
                 .priority(task.getPriority())
                 .status(task.getStatus())
                 .description(task.getDescription())
-                .attachments(task.getAttachments())
+                .attachments(mapAttachmentsToListDto(task.getAttachments()))
+                .commentsCount(task.getComments().size())
                 .subtasks(mapTaskSubtasksToDto(task))
                 .build()
         ).toList();
@@ -451,6 +478,52 @@ public class TaskService {
             .content(comment.getContent())
             .createdAt(comment.getCreatedAt())
             .build();
+    }
+
+    private List<ProjectFileDTO> mapAttachmentsToListDto(List<ProjectFile> files) {
+        return files.stream().map(
+            file -> ProjectFileDTO.builder()
+                .id(file.getId())
+                .fileUrl(file.getStoredName())
+                .name(file.getOriginalName())
+                .type(file.getContentType())
+                .size(file.getSize())
+                .taskTitle(file.getTask() == null ? null : file.getTask().getTitle())    
+                .taskId(file.getTask() == null ? null : file.getTask().getId())
+                .uploadDate(file.getUploadetAt())
+                .uploaderName(file.getUploader().getName() + " " + file.getUploader().getSurname())
+                .build()
+        ).toList();
+    }
+
+    public List<Map<String, Object>> getTaskVelocityChart(Long userId, int days) {
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(days - 1);
+
+        List<Object[]> results = taskRepository.countCompletedTasksByDate(userId, startDate.atStartOfDay());
+
+        Map<String, Long> res = new HashMap<>();
+        for(Object[] row : results) {
+            String dateStr = row[0].toString();
+            Long count = ((Number) row[1]).longValue();
+            res.put(dateStr, count);
+        }
+
+        List<Map<String, Object>> chartData = new ArrayList();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd");
+
+        for(int i = 0; i < days; i++) {
+            LocalDate currenDate = startDate.plusDays(i);
+            String dbDataKey = currenDate.toString();
+
+            Map<String, Object> dayData = new HashMap<>();
+            dayData.put("date", currenDate.format(formatter));
+            dayData.put("completed", res.getOrDefault(dbDataKey, 0L));
+
+            chartData.add(dayData);
+        }
+
+        return chartData;
     }
 
 }

@@ -18,7 +18,7 @@ public class ProjectSecurity {
         this.memberRepo = memberRepo;
     }
     
-    public boolean hasRole(SZP_User user, Long projectId, String... roles) {
+    public boolean hasAnyRole(SZP_User user, Long projectId, String... roles) {
 
         if(user == null || projectId == null) return false;
 

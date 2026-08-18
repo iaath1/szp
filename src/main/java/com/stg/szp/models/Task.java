@@ -73,7 +73,7 @@ public class Task {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "completed_at", updatable = false)
+    @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
     @Column(name = "deadline_at")
@@ -82,10 +82,8 @@ public class Task {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @ElementCollection
-    @CollectionTable(name = "task_attachments", joinColumns = @JoinColumn(name = "task_id"))
-    @Column(name = "file_url")
-    private List<String> attachments = new ArrayList<>();
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL)
+    private List<ProjectFile> attachments = new ArrayList<>();
 
     @ManyToOne
     private Milestone milestone;

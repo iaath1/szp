@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Data
 @AllArgsConstructor
@@ -33,6 +34,7 @@ public class ProjectDetailsDTO {
 
     private Long proggress;
 
+    @JsonProperty("isPrivate")
     private boolean isPrivate;
 
     private LocalDateTime startAt;

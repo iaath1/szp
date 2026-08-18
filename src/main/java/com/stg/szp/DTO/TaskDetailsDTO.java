@@ -41,6 +41,7 @@ public class TaskDetailsDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deadlineAt;
-    private List<String> attachments;
+    private List<ProjectFileDTO> attachments;
+    private Integer commentsCount;
     private List<SubtaskDTO> subtasks;
 }

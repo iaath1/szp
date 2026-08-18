@@ -14,6 +14,7 @@ import com.stg.szp.DTO.MyProjectDTO;
 import java.util.Optional;
 import com.stg.szp.DTO.MyProjectsStatsDTO;
 import com.stg.szp.DTO.ProjectDetailsDTO;
+import com.stg.szp.DTO.ProjectFileDTO;
 import com.stg.szp.DTO.ProjectResponseDTO;
 import com.stg.szp.DTO.TagDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
@@ -22,12 +23,14 @@ import com.stg.szp.DTO.UpcomingTasksDTO;
 import com.stg.szp.DTO.UserResponseDTO;
 import com.stg.szp.DTO.SubtaskDTO;
 import com.stg.szp.models.Project;
+import com.stg.szp.models.ProjectFile;
 import com.stg.szp.models.ProjectMember;
 import com.stg.szp.models.ProjectRole;
 import com.stg.szp.models.ProjectStatus;
 import com.stg.szp.models.SZP_User;
 import com.stg.szp.models.Tag;
 import com.stg.szp.models.TaskStatus;
+import com.stg.szp.repos.ProjectFileRepository;
 import com.stg.szp.repos.ProjectMemberRepository;
 import com.stg.szp.repos.ProjectRepository;
 import com.stg.szp.repos.SZP_UserRepository;
@@ -40,17 +43,20 @@ public class ProjectService {
     private final SZP_UserRepository userRepository;
     private final TaskRepository taskRepo;
     private final ProjectMemberRepository projectMemberRepo;
+    private final ProjectFileRepository pfRepo;
 
     public ProjectService(
             ProjectRepository projectRepository,
             SZP_UserRepository userRepository,
             TaskRepository taskRepo,
-            ProjectMemberRepository projectMemberRepo
+            ProjectMemberRepository projectMemberRepo,
+            ProjectFileRepository pfRepo
         ) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
         this.taskRepo = taskRepo;
         this.projectMemberRepo = projectMemberRepo;
+        this.pfRepo = pfRepo;
     }
 
     @Transactional(readOnly = true)
@@ -289,7 +295,7 @@ public class ProjectService {
                 .title(task.getTitle())
                 .status(task.getStatus())
                 .updatedAt(task.getUpdatedAt())
-                .attachments(task.getAttachments())
+                .attachments(mapAttachmentsToListDto(task.getAttachments()))
                 .subtasks(mapTaskSubtasksToDto(task))
                 .build()
         ).toList();
@@ -391,6 +397,42 @@ public class ProjectService {
                 .id(subtask.getId())
                 .title(subtask.getTitle())
                 .isCompleted(subtask.isCompleted())
+                .build()
+        ).toList();
+    }
+
+    public List<ProjectFileDTO> getProjectFiles(Long projectId) {
+        if(!projectRepository.existsById(projectId)) return null;
+
+        List<ProjectFile> files = pfRepo.findAllByProjectId(projectId);
+
+        return files.stream().map(
+            file -> ProjectFileDTO.builder()
+                .fileUrl(file.getStoredName())
+                .name(file.getOriginalName())
+                .id(file.getId())
+                .size(file.getSize())
+                .type(file.getContentType())
+                .uploadDate(file.getUploadetAt())
+                .taskTitle(file.getTask() != null ? file.getTask().getTitle() : null)
+                .taskId(file.getTask() != null ? file.getTask().getId() : null)
+                .uploaderName(file.getUploader().getName() + " " + file.getUploader().getSurname())
+                .build()
+        ).toList();
+    }
+
+    private List<ProjectFileDTO> mapAttachmentsToListDto(List<ProjectFile> files) {
+        return files.stream().map(
+            file -> ProjectFileDTO.builder()
+                .id(file.getId())
+                .fileUrl(file.getStoredName())
+                .name(file.getOriginalName())
+                .type(file.getContentType())
+                .size(file.getSize())
+                .taskTitle(file.getTask() == null ? null : file.getTask().getTitle())    
+                .taskId(file.getTask() == null ? null : file.getTask().getId())
+                .uploadDate(file.getUploadetAt())
+                .uploaderName(file.getUploader().getName() + " " + file.getUploader().getSurname())
                 .build()
         ).toList();
     }

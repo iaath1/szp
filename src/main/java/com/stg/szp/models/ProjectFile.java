@@ -10,11 +10,15 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "project_files")
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class ProjectFile {
     
     @Id
@@ -33,6 +37,10 @@ public class ProjectFile {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploader_id", nullable = false)
     private SZP_User uploader;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "task_id", nullable = true)
+    private Task task;
 
     private LocalDateTime uploadetAt;
 }
