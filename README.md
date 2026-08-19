@@ -1,7 +1,7 @@
 # SZP — System Zarządzania Projektami
 
 > **Webowy system do zarządzania projektami** — praca inżynierska.  
-> Backend REST API zbudowany w oparciu o **Java 17 + Spring Boot**, z uwierzytelnianiem JWT i bazą danych PostgreSQL.
+> Backend REST API zbudowany w oparciu o **Java 25 + Spring Boot**, z uwierzytelnianiem JWT i bazą danych PostgreSQL.
 
 ---
 
