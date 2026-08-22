@@ -30,4 +30,14 @@ public class UserController {
         List<UserResponseDTO> response = userService.getSuggestedUsers(user, projectId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    @GetMapping("/team")
+    public ResponseEntity<List<UserResponseDTO>> getMyTeam(@AuthenticationPrincipal SZP_User user) {
+        if(user == null) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        
+        List<UserResponseDTO> response = userService.getMyTeam(user);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }

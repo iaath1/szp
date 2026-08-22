@@ -102,4 +102,33 @@ public class UserService {
             .avatarUrl(user.getAvatarPath())
             .build();
     }
+
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> getMyTeam(SZP_User user) {
+        if (user == null || user.getId() == null) {
+            return Collections.emptyList();
+        }
+
+        List<Project> userProjects = projectRepository.findAllByOwnerOrMember(user.getId());
+        Map<Long, SZP_User> teamMembers = new HashMap<>();
+
+        for (Project project : userProjects) {
+            if (project.getOwner() != null && !project.getOwner().getId().equals(user.getId())) {
+                teamMembers.putIfAbsent(project.getOwner().getId(), project.getOwner());
+            }
+
+            if (project.getMembers() != null) {
+                for (SZP_User member : project.getMembers()) {
+                    if (member != null && member.getId() != null && !member.getId().equals(user.getId())) {
+                        teamMembers.putIfAbsent(member.getId(), member);
+                    }
+                }
+            }
+        }
+
+        return teamMembers.values().stream()
+            .map(this::mapToUserResponseDTO)
+            .collect(Collectors.toList());
+    }
+
 }
