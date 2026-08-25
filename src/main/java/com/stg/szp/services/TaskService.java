@@ -24,6 +24,7 @@ import com.stg.szp.DTO.TaskDetailsDTO;
 import com.stg.szp.DTO.TaskStatusCountDTO;
 import com.stg.szp.DTO.UpcomingTasksDTO;
 import com.stg.szp.DTO.UpdateTaskStatusDTO;
+import com.stg.szp.models.NotificationType;
 import com.stg.szp.models.Project;
 import com.stg.szp.models.ProjectFile;
 import com.stg.szp.models.SZP_User;
@@ -46,13 +47,15 @@ public class TaskService {
     private final SubtaskRepository subtaskRepo;
     private final TaskCommentRepository taskCommentRepo;
     private final ProjectFileRepository projectFileRepo;
+    private final NotificationService notificationService;
 
     public TaskService(TaskRepository taskRepository,
         ProjectRepository projectRepository,
         SZP_UserRepository SZP_UserRepository,
         SubtaskRepository subtaskRepo,
         TaskCommentRepository taskCommentRepo,
-        ProjectFileRepository projectFileRepo
+        ProjectFileRepository projectFileRepo,
+        NotificationService notificationService
         ) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
@@ -60,6 +63,7 @@ public class TaskService {
         this.subtaskRepo = subtaskRepo;
         this.taskCommentRepo = taskCommentRepo;
         this.projectFileRepo = projectFileRepo;
+        this.notificationService = notificationService;
     }
 
 
@@ -124,6 +128,14 @@ public class TaskService {
             throw new IllegalArgumentException("Task sequence must be unique within the project");
         }
 
+        if(task.getAssignee() != null) {
+            notificationService.createNotification(task.getAssignee(),
+            NotificationType.TASK_UPDATE, 
+            "New task", 
+            "New task was assigned to you: " + task.getTitle(), 
+            "/projects/" + task.getProject().getId());
+        }
+
         return TaskDetailsDTO.builder()
 
             .id(task.getId())
@@ -178,6 +190,13 @@ public class TaskService {
             throw new IllegalArgumentException("Task sequence must be unique within the project");
         }
 
+        if(task.getAssignee() != null) {
+            notificationService.createNotification(userAssignee, NotificationType.TASK_UPDATE,
+            task.getTitle(),
+            "Task updated: " + task.getTitle(),
+            "/projects/" + task.getProject().getId());
+        }
+
         return TaskDetailsDTO.builder()
             .id(task.getId())
             .assigneeEmail(createTaskDTO.getAssigneeEmail())
@@ -201,6 +220,13 @@ public class TaskService {
 
             if(taskToUpdate.getStatus().equals(TaskStatus.DONE)) taskToUpdate.setCompletedAt(LocalDateTime.now());
             taskRepository.save(taskToUpdate);
+
+            if(taskToUpdate.getAssignee() != null) {
+                notificationService.createNotification(taskToUpdate.getAssignee(), NotificationType.TASK_UPDATE,
+                taskToUpdate.getTitle(),
+                "Task status updated: " + taskToUpdate.getTitle() + taskToUpdate.getStatus(),
+                "/projects/" + taskToUpdate.getProject().getId());
+            }
 
             return TaskDetailsDTO.builder()
                 .id(taskToUpdate.getId())

@@ -2,6 +2,7 @@ package com.stg.szp.controllers;
 
 import java.util.List;
 
+import org.apache.catalina.connector.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -176,6 +177,16 @@ public class ProjectController {
     public ResponseEntity<List<ProjectFileDTO>> getProjectFiles(@PathVariable Long projectId) {
         List<ProjectFileDTO> response = projectService.getProjectFiles(projectId);
 
+        if(response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/files/my")
+    public ResponseEntity<List<ProjectFileDTO>> getMyProjectsFiles(@AuthenticationPrincipal SZP_User user) {
+        if(user == null) return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        
+        List<ProjectFileDTO> response = projectService.getAllUserProjectFiles(user);
         if(response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
         return new ResponseEntity<>(response, HttpStatus.OK);

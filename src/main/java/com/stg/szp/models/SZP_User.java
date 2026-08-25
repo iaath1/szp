@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -56,6 +57,9 @@ public class SZP_User implements UserDetails {
     private String name;
     private String surname;
 
+    @Column(length = 500)
+    private String bio;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "user_roles",
@@ -78,6 +82,10 @@ public class SZP_User implements UserDetails {
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TaskComment> comments = new ArrayList<>();
+
+    @Embedded
+    @Builder.Default
+    NotificationPreferences notificationPreferences = new NotificationPreferences();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

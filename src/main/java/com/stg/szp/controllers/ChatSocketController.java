@@ -27,4 +27,9 @@ public class ChatSocketController {
         MessageResponseDTO savedMessage = chatService.saveMessage(chatId, sender, request.getText());
         messagingTemplate.convertAndSend("/topic/chat/" + chatId, savedMessage);
     }
+
+    @MessageMapping("/chat/{chatId}/signal")
+    public void sendSignal(@DestinationVariable Long chatId, @Payload String signalData) {
+        messagingTemplate.convertAndSend("/topic/call/" + chatId, signalData);
+    }
 }

@@ -2,6 +2,7 @@ package com.stg.szp.services;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -22,6 +23,7 @@ import com.stg.szp.DTO.TaskStatusCountDTO;
 import com.stg.szp.DTO.UpcomingTasksDTO;
 import com.stg.szp.DTO.UserResponseDTO;
 import com.stg.szp.DTO.SubtaskDTO;
+import com.stg.szp.models.NotificationType;
 import com.stg.szp.models.Project;
 import com.stg.szp.models.ProjectFile;
 import com.stg.szp.models.ProjectMember;
@@ -37,6 +39,7 @@ import com.stg.szp.repos.SZP_UserRepository;
 import com.stg.szp.repos.TaskRepository;
 
 @Service
+@Transactional
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
@@ -44,19 +47,22 @@ public class ProjectService {
     private final TaskRepository taskRepo;
     private final ProjectMemberRepository projectMemberRepo;
     private final ProjectFileRepository pfRepo;
+    private final NotificationService notificationService;
 
     public ProjectService(
             ProjectRepository projectRepository,
             SZP_UserRepository userRepository,
             TaskRepository taskRepo,
             ProjectMemberRepository projectMemberRepo,
-            ProjectFileRepository pfRepo
+            ProjectFileRepository pfRepo,
+            NotificationService notificationService
         ) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
         this.taskRepo = taskRepo;
         this.projectMemberRepo = projectMemberRepo;
         this.pfRepo = pfRepo;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -233,6 +239,12 @@ public class ProjectService {
             project.getMembers().add(userToAdd);
             projectMemberRepo.save(new ProjectMember(userToAdd, project, dto.getRole()));
             projectRepository.save(project);
+
+            notificationService.createNotification(userToAdd,
+                NotificationType.PROJECT_INVITE,
+                "Invite to project", 
+                "You have been invited to project: " + project.getTitle(), 
+                "/projects/" + project.getId());
             return true;
         }
 
@@ -403,7 +415,7 @@ public class ProjectService {
 
     public List<ProjectFileDTO> getProjectFiles(Long projectId) {
         if(!projectRepository.existsById(projectId)) return null;
-
+        Project project = projectRepository.findById(projectId).get();
         List<ProjectFile> files = pfRepo.findAllByProjectId(projectId);
 
         return files.stream().map(
@@ -417,6 +429,8 @@ public class ProjectService {
                 .taskTitle(file.getTask() != null ? file.getTask().getTitle() : null)
                 .taskId(file.getTask() != null ? file.getTask().getId() : null)
                 .uploaderName(file.getUploader().getName() + " " + file.getUploader().getSurname())
+                .projectId(projectId)
+                .projectName(project.getTitle())
                 .build()
         ).toList();
     }
@@ -435,5 +449,32 @@ public class ProjectService {
                 .uploaderName(file.getUploader().getName() + " " + file.getUploader().getSurname())
                 .build()
         ).toList();
+    }
+
+    public List<ProjectFileDTO> getAllUserProjectFiles(SZP_User user) {
+        List<Project> projects = projectRepository.findAllByOwnerOrMember(user.getId());
+        if(projects != null) {
+            List<ProjectFile> files = pfRepo.findAllByProjectIn(projects);
+
+            if(files != null) {
+                return files.stream().map(
+                    file -> ProjectFileDTO.builder()
+                        .fileUrl(file.getStoredName())
+                        .name(file.getOriginalName())
+                        .id(file.getId())
+                        .size(file.getSize())
+                        .type(file.getContentType())
+                        .uploadDate(file.getUploadetAt())
+                        .taskTitle(file.getTask() != null ? file.getTask().getTitle() : null)
+                        .taskId(file.getTask() != null ? file.getTask().getId() : null)
+                        .uploaderName(file.getUploader().getName() + " " + file.getUploader().getSurname())
+                        .projectId(file.getProject().getId())
+                        .projectName(file.getProject().getTitle())
+                        .build()  
+                ).collect(Collectors.toList());
+            }
+        }
+
+        return null;
     }
 }

@@ -16,6 +16,8 @@ public class UserResponseDTO {
     private String email;
     private String name;
     private String surname;
+    private String bio;
     private String avatarUrl;
     private ProjectRole projectRole;
+    private NotificationsPreferencesDTO notifications;
 }

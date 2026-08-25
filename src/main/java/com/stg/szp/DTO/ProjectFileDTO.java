@@ -21,4 +21,6 @@ public class ProjectFileDTO {
     private Long taskId;
     private String taskTitle;
     private String fileUrl;
+    private String projectName;
+    private Long projectId;
 }
