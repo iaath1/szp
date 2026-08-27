@@ -11,11 +11,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.stg.szp.DTO.ChangePasswordDTO;
 import com.stg.szp.DTO.NotificationsPreferencesDTO;
 import com.stg.szp.DTO.UserProfileUpdateDTO;
 import com.stg.szp.DTO.UserResponseDTO;
@@ -29,15 +31,30 @@ import com.stg.szp.repos.SZP_UserRepository;
 public class UserService {
     
     private final SZP_UserRepository userRepo;
+    private final PasswordEncoder passwordEncoder;
     private final ProjectRepository projectRepository;
     private final Path userPathUrl = Path.of("uploads").toAbsolutePath().normalize();
 
-    public UserService(SZP_UserRepository userRepo, ProjectRepository projectRepository) {
+    public UserService(SZP_UserRepository userRepo, ProjectRepository projectRepository, PasswordEncoder passwordEncoder) {
         this.userRepo = userRepo;
         this.projectRepository = projectRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public void saveUser(SZP_User user) {
+        userRepo.save(user);
+    }
+
+    public void changePassword(SZP_User user, ChangePasswordDTO dto) {
+        if(!passwordEncoder.matches(dto.getOldPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Invalid current password");
+        }
+
+        if(passwordEncoder.matches(dto.getNewPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("New password cant be the same as old password");
+        }
+
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
         userRepo.save(user);
     }
 
@@ -152,10 +169,20 @@ public class UserService {
             .avatarUrl(user.getAvatarPath())
             .bio(user.getBio())
             .notifications(mapToNotificationsPreferencesDTO(user.getNotificationPreferences()))
+            .mfaEnabled(user.isMfaEnabled())
             .build();
     }
 
     public NotificationsPreferencesDTO mapToNotificationsPreferencesDTO(NotificationPreferences notifications) {
+        if(notifications == null) {
+            notifications = new NotificationPreferences();
+            notifications.setEmailNotifications(true);
+            notifications.setMentions(true);
+            notifications.setProjectInvites(true);
+            notifications.setPushNotifications(true);
+            notifications.setTaskUpdated(true);
+        }
+
         return NotificationsPreferencesDTO.builder()
             .emailNotifications(notifications.isEmailNotifications())
             .mentions(notifications.isMentions())

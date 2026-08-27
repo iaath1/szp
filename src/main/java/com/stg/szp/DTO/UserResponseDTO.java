@@ -20,4 +20,5 @@ public class UserResponseDTO {
     private String avatarUrl;
     private ProjectRole projectRole;
     private NotificationsPreferencesDTO notifications;
+    private boolean mfaEnabled;
 }

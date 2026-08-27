@@ -95,7 +95,7 @@ public class TaskController {
 
     public ResponseEntity<TaskDetailsDTO> updateTaskSttaus(@PathVariable Long taskId, @RequestBody UpdateTaskStatusDTO statusDto, @AuthenticationPrincipal SZP_User user) {
         if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        TaskDetailsDTO response = taskService.updateTaskStatus(taskId, statusDto);
+        TaskDetailsDTO response = taskService.updateTaskStatus(taskId, statusDto, user);
 
         if(response == null) return new ResponseEntity<>(HttpStatusCode.valueOf(404));
 

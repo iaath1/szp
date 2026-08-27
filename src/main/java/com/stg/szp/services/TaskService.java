@@ -128,7 +128,7 @@ public class TaskService {
             throw new IllegalArgumentException("Task sequence must be unique within the project");
         }
 
-        if(task.getAssignee() != null) {
+        if(task.getAssignee() != null && !task.getAssignee().getId().equals(user.getId())) {
             notificationService.createNotification(task.getAssignee(),
             NotificationType.TASK_UPDATE, 
             "New task", 
@@ -190,12 +190,12 @@ public class TaskService {
             throw new IllegalArgumentException("Task sequence must be unique within the project");
         }
 
-        if(task.getAssignee() != null) {
-            notificationService.createNotification(userAssignee, NotificationType.TASK_UPDATE,
-            task.getTitle(),
-            "Task updated: " + task.getTitle(),
-            "/projects/" + task.getProject().getId());
-        }
+        if(task.getAssignee() != null && !task.getAssignee().getId().equals(user.getId())) {
+                notificationService.createNotification(task.getAssignee(), NotificationType.TASK_UPDATE,
+                task.getTitle(),
+                "Task status updated: " + task.getTitle() + task.getStatus(),
+                "/projects/" + task.getProject().getId());
+            }
 
         return TaskDetailsDTO.builder()
             .id(task.getId())
@@ -212,7 +212,7 @@ public class TaskService {
 
     }
 
-    public TaskDetailsDTO updateTaskStatus(Long taskId, UpdateTaskStatusDTO statusDto) {
+    public TaskDetailsDTO updateTaskStatus(Long taskId, UpdateTaskStatusDTO statusDto, SZP_User currentUser) {
         
         if(taskRepository.existsById(taskId)) {
             Task taskToUpdate = taskRepository.findById(taskId).get();
@@ -221,7 +221,7 @@ public class TaskService {
             if(taskToUpdate.getStatus().equals(TaskStatus.DONE)) taskToUpdate.setCompletedAt(LocalDateTime.now());
             taskRepository.save(taskToUpdate);
 
-            if(taskToUpdate.getAssignee() != null) {
+            if(taskToUpdate.getAssignee() != null && !taskToUpdate.getAssignee().getId().equals(currentUser.getId())) {
                 notificationService.createNotification(taskToUpdate.getAssignee(), NotificationType.TASK_UPDATE,
                 taskToUpdate.getTitle(),
                 "Task status updated: " + taskToUpdate.getTitle() + taskToUpdate.getStatus(),

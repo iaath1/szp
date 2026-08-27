@@ -1,6 +1,7 @@
 package com.stg.szp.controllers;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.catalina.connector.Response;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.stg.szp.DTO.ChangePasswordDTO;
 import com.stg.szp.DTO.NotificationsPreferencesDTO;
 import com.stg.szp.DTO.UserProfileUpdateDTO;
 import com.stg.szp.DTO.UserResponseDTO;
@@ -81,5 +83,17 @@ public class UserController {
 
         UserResponseDTO response = userService.updateNotifications(user, dto);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PutMapping("/profile/password")
+    public ResponseEntity<?> changeUserPassword(@AuthenticationPrincipal SZP_User user, @RequestBody ChangePasswordDTO dto) {
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+
+        try {
+            userService.changePassword(user, dto);
+            return ResponseEntity.ok().build();
+        } catch(IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
     }
 }

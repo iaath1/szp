@@ -9,6 +9,7 @@ import org.springframework.boot.security.autoconfigure.SecurityProperties.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -55,7 +56,7 @@ public class AuthService {
         );
 
         return userRepo.findByEmail(input.getEmail())
-                .orElseThrow(() -> new org.springframework.security.core.userdetails.UsernameNotFoundException(
+                .orElseThrow(() -> new UsernameNotFoundException(
                         "User not found: " + input.getEmail()));
     }
 

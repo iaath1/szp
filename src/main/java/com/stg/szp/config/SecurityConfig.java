@@ -24,6 +24,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.stg.szp.repos.SZP_UserRepository;
 
+import dev.samstevens.totp.secret.SecretGenerator;
+
 @Configuration
 public class SecurityConfig {
 
