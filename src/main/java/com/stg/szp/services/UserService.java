@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.stg.szp.DTO.ChangePasswordDTO;
 import com.stg.szp.DTO.NotificationsPreferencesDTO;
+import com.stg.szp.DTO.PublicUserProfileDTO;
 import com.stg.szp.DTO.UserProfileUpdateDTO;
 import com.stg.szp.DTO.UserResponseDTO;
 import com.stg.szp.models.NotificationPreferences;
@@ -111,6 +112,9 @@ public class UserService {
         userToUpdate.setBio(dto.getBio());
         userToUpdate.setName(dto.getName());
         userToUpdate.setSurname(dto.getSurname());
+        userToUpdate.setAccentColor(dto.getAccentColor());
+        userToUpdate.setCompactMode(dto.isCompactMode());
+        userToUpdate.setTheme(dto.getTheme());
 
         userRepo.save(userToUpdate);
         
@@ -170,6 +174,9 @@ public class UserService {
             .bio(user.getBio())
             .notifications(mapToNotificationsPreferencesDTO(user.getNotificationPreferences()))
             .mfaEnabled(user.isMfaEnabled())
+            .theme(user.getTheme())
+            .accentColor(user.getAccentColor())
+            .compactMode(user.isCompactMode())
             .build();
     }
 
@@ -232,6 +239,21 @@ public class UserService {
         return teamMembers.values().stream()
             .map(this::mapToUserResponseDTO)
             .collect(Collectors.toList());
+    }
+
+    public PublicUserProfileDTO getUserPublicProfile(Long userId) {
+        SZP_User user = userRepo.findById(userId).orElse( null);
+
+        if(user == null) return null;
+
+        return PublicUserProfileDTO.builder()
+            .id(userId)
+            .name(user.getName())
+            .surname(user.getSurname())
+            .email(user.getEmail())
+            .bio(user.getBio())
+            .avatarUrl(user.getAvatarPath())
+            .build();
     }
 
 }

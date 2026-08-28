@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.stg.szp.DTO.ChangePasswordDTO;
 import com.stg.szp.DTO.NotificationsPreferencesDTO;
+import com.stg.szp.DTO.PublicUserProfileDTO;
 import com.stg.szp.DTO.UserProfileUpdateDTO;
 import com.stg.szp.DTO.UserResponseDTO;
 import com.stg.szp.models.NotificationPreferences;
@@ -95,5 +96,14 @@ public class UserController {
         } catch(IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
         }
+    }
+
+    @GetMapping("/{userId}/profile")
+    public ResponseEntity<PublicUserProfileDTO> getPublicUserProfile(@PathVariable Long userId) {
+        PublicUserProfileDTO response = userService.getUserPublicProfile(userId);
+
+        if(response == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

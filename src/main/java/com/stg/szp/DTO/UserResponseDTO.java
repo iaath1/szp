@@ -17,6 +17,9 @@ public class UserResponseDTO {
     private String name;
     private String surname;
     private String bio;
+    private String theme;
+    private String accentColor;
+    private boolean compactMode;
     private String avatarUrl;
     private ProjectRole projectRole;
     private NotificationsPreferencesDTO notifications;

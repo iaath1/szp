@@ -9,12 +9,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Data
 @Builder
-public class UserProfileUpdateDTO {
+public class PublicUserProfileDTO {
+    private Long id;
     private String name;
     private String surname;
     private String email;
-    private String theme;
-    private String accentColor;
-    private boolean compactMode;
     private String bio;
+    private String avatarUrl;
 }

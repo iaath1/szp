@@ -73,6 +73,15 @@ public class SZP_User implements UserDetails {
     @Column(name = "created_at", updatable = false)
     private Timestamp createdAt;
 
+    @Column(name = "theme")
+    private String theme = "light";
+
+    @Column(name = "accent_color")
+    private String accentColor = "#592BF0";
+
+    @Column(name = "compact_mode")
+    private boolean compactMode = false;
+
     @JsonIgnore
     @ManyToMany(mappedBy = "members")
     private Set<Project> projects = new HashSet<>();
