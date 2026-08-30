@@ -3,7 +3,9 @@ package com.stg.szp.services;
 import com.stg.szp.repos.RoleRepository;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import org.springframework.boot.security.autoconfigure.SecurityProperties.User;
 import org.springframework.http.ResponseEntity;
@@ -80,5 +82,56 @@ public class AuthService {
         String newAccessToken = jwtService.generateAccessToken(user);
         return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
 
+    }
+
+    public SZP_User authenticateWithGoogle(String email, String name, String familyName, String pictureUrl) {
+        Optional<SZP_User> userOpt = userRepo.findByEmail(email);
+
+        if(userOpt.isPresent()) {
+            SZP_User user = userOpt.get();
+            return user;
+        } else {
+            SZP_User user = new SZP_User();
+            user.setEmail(email);
+            user.setName(name);
+            user.setSurname(familyName != null ? familyName : "");
+            user.setAvatarPath(pictureUrl);
+
+            // can be added in the future
+            // user.setAuthProvider("GOOGLE")
+
+            user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+
+            return userRepo.save(user);
+        }
+    }
+
+    public SZP_User authenticateWithGithub(String email, String name, String login, String avatarUrl) {
+        Optional<SZP_User> userOpt = userRepo.findByEmail(email);
+        if(userOpt.isPresent()) {
+            return userOpt.get();
+        } else {
+            SZP_User newUser = new SZP_User();
+            newUser.setEmail(email);
+
+            if(name != null && !name.isEmpty()) {
+                String[] nameParts = name.split(" ", 2);
+                newUser.setName(nameParts[0]);
+                if(nameParts.length > 1) {
+                    newUser.setSurname(nameParts[1]);
+                } else {
+                    newUser.setSurname("");
+                }
+            } else {
+                newUser.setName(login);
+                newUser.setSurname("");
+            }
+
+            newUser.setAvatarPath(avatarUrl);
+            newUser.setMfaEnabled(false);
+
+            newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+            return userRepo.save(newUser);
+        }
     }
 }
