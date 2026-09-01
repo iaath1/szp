@@ -25,6 +25,7 @@ import com.stg.szp.DTO.SubtaskDTO;
 import com.stg.szp.DTO.TaskCommentDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
 import com.stg.szp.DTO.TaskStatusCountDTO;
+import com.stg.szp.DTO.TeamWorkloadDTO;
 import com.stg.szp.DTO.UpcomingTasksDTO;
 import com.stg.szp.DTO.UpdateTaskStatusDTO;
 import com.stg.szp.models.SZP_User;
@@ -103,8 +104,8 @@ public class TaskController {
     }
 
     @PostMapping("/{taskId}/attachments/{fileId}")
-    public ResponseEntity<TaskDetailsDTO> addAttachment(@PathVariable Long taskId, @PathVariable Long fileId) {
-        TaskDetailsDTO response = taskService.addAttachment(taskId, fileId);
+    public ResponseEntity<TaskDetailsDTO> addAttachment(@AuthenticationPrincipal SZP_User user, @PathVariable Long taskId, @PathVariable Long fileId) {
+        TaskDetailsDTO response = taskService.addAttachment(user, taskId, fileId);
         if(response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -218,5 +219,12 @@ public class TaskController {
         List<Map<String, Object>> res = taskService.getTaskVelocityChart(user.getId(), days);
 
         return new ResponseEntity<>(res, HttpStatus.OK);
+    }
+
+    @GetMapping("/team-workload")
+    public ResponseEntity<List<TeamWorkloadDTO>> getTeamWorkload(@AuthenticationPrincipal SZP_User user) {
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+
+        return new ResponseEntity<>(taskService.getTeamWorkload(user), HttpStatus.OK);
     }
 }

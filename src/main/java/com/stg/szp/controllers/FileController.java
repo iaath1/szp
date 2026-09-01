@@ -24,6 +24,7 @@ import com.stg.szp.models.ProjectFile;
 import com.stg.szp.models.SZP_User;
 import com.stg.szp.repos.ProjectFileRepository;
 import com.stg.szp.repos.ProjectRepository;
+import com.stg.szp.services.ActivityLogService;
 import com.stg.szp.services.FileStorageService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,6 +38,7 @@ public class FileController {
     private final FileStorageService fileService;
     private final ProjectFileRepository pfRepo;
     private final ProjectRepository projectRepo;
+    private final ActivityLogService activityService;
 
     @PostMapping("/upload/")
     public ResponseEntity<UploadFileResponse> uploadFile(@RequestParam("file") MultipartFile file) {
@@ -74,6 +76,8 @@ public class FileController {
         pfToSave.setProject(projectRepo.findById(projectId).get());
         pfToSave.setUploader(user);
         pfToSave.setUploadetAt(LocalDateTime.now());
+        
+        activityService.logActivity("FILE_UPLOADED", "file '" + fileName + "'was uploaded to project " + pfToSave.getProject().getTitle(), pfToSave.getProject(), user);
 
         pfRepo.save(pfToSave);
 

@@ -11,9 +11,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Service;
 
 import com.stg.szp.DTO.CreateTaskDTO;
@@ -22,6 +24,7 @@ import com.stg.szp.DTO.SubtaskDTO;
 import com.stg.szp.DTO.TaskCommentDTO;
 import com.stg.szp.DTO.TaskDetailsDTO;
 import com.stg.szp.DTO.TaskStatusCountDTO;
+import com.stg.szp.DTO.TeamWorkloadDTO;
 import com.stg.szp.DTO.UpcomingTasksDTO;
 import com.stg.szp.DTO.UpdateTaskStatusDTO;
 import com.stg.szp.models.NotificationType;
@@ -48,6 +51,7 @@ public class TaskService {
     private final TaskCommentRepository taskCommentRepo;
     private final ProjectFileRepository projectFileRepo;
     private final NotificationService notificationService;
+    private final ActivityLogService activityService;
 
     public TaskService(TaskRepository taskRepository,
         ProjectRepository projectRepository,
@@ -55,7 +59,8 @@ public class TaskService {
         SubtaskRepository subtaskRepo,
         TaskCommentRepository taskCommentRepo,
         ProjectFileRepository projectFileRepo,
-        NotificationService notificationService
+        NotificationService notificationService,
+        ActivityLogService activityService
         ) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
@@ -64,6 +69,7 @@ public class TaskService {
         this.taskCommentRepo = taskCommentRepo;
         this.projectFileRepo = projectFileRepo;
         this.notificationService = notificationService;
+        this.activityService = activityService;
     }
 
 
@@ -124,6 +130,7 @@ public class TaskService {
 
         try {
             task = taskRepository.save(task);
+            activityService.logActivity("TASK_CREATED", "Task '" + task.getTitle() + "' was created.", project, user);
         } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("Task sequence must be unique within the project");
         }
@@ -186,6 +193,7 @@ public class TaskService {
         if(task.getStatus().equals(TaskStatus.DONE)) task.setCompletedAt(LocalDateTime.now());
         try {
             taskRepository.save(task);
+            activityService.logActivity("TASK_UPDATE", "Task '" + task.getTitle() + "' was updated", project, user);
         } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("Task sequence must be unique within the project");
         }
@@ -218,7 +226,10 @@ public class TaskService {
             Task taskToUpdate = taskRepository.findById(taskId).get();
             taskToUpdate.setStatus(statusDto.getStatus());
 
-            if(taskToUpdate.getStatus().equals(TaskStatus.DONE)) taskToUpdate.setCompletedAt(LocalDateTime.now());
+            if(taskToUpdate.getStatus().equals(TaskStatus.DONE)) {
+                taskToUpdate.setCompletedAt(LocalDateTime.now());
+                activityService.logActivity("TASK_UPDATE", "Task '" + taskToUpdate.getTitle() + "' was completed", taskToUpdate.getProject(), currentUser);
+            } 
             taskRepository.save(taskToUpdate);
 
             if(taskToUpdate.getAssignee() != null && !taskToUpdate.getAssignee().getId().equals(currentUser.getId())) {
@@ -226,6 +237,7 @@ public class TaskService {
                 taskToUpdate.getTitle(),
                 "Task status updated: " + taskToUpdate.getTitle() + taskToUpdate.getStatus(),
                 "/projects/" + taskToUpdate.getProject().getId());
+                activityService.logActivity("TASK_UPDATE", "Task '" + taskToUpdate.getTitle() + "'status was updated", taskToUpdate.getProject(), currentUser);
             }
 
             return TaskDetailsDTO.builder()
@@ -246,7 +258,7 @@ public class TaskService {
     }
 
     @Transactional
-    public TaskDetailsDTO addAttachment(Long taskId, Long fileId) {
+    public TaskDetailsDTO addAttachment(SZP_User user, Long taskId, Long fileId) {
         if(taskRepository.existsById(taskId) && projectFileRepo.existsById(fileId)) {
             Task taskToUpdate = taskRepository.findById(taskId).get();
             ProjectFile file = projectFileRepo.findById(fileId).get();
@@ -256,6 +268,7 @@ public class TaskService {
             
             // refresh task attachments list if necessary
             taskToUpdate.getAttachments().add(file);
+            activityService.logActivity("TASK_UPDATE", "Attachment to task '" + taskToUpdate.getTitle() + "' was added", taskToUpdate.getProject(), user);
 
             return TaskDetailsDTO.builder()
                 .id(taskToUpdate.getId())
@@ -550,6 +563,44 @@ public class TaskService {
         }
 
         return chartData;
+    }
+
+    public List<TeamWorkloadDTO> getTeamWorkload(SZP_User user) {
+        List<Project> projects = projectRepository.findAllByOwnerOrMember(user.getId());
+        List<Task> allTasks = projects.stream()
+            .flatMap(project -> taskRepository.findAllByProjectId(project.getId()).stream())
+            .filter(task -> task.getAssignee() != null)
+            .distinct()
+            .collect(Collectors.toList());
+
+        Map<SZP_User, List<Task>> tasksByAssignee = allTasks.stream().collect(Collectors.groupingBy(Task::getAssignee));
+
+        List<TeamWorkloadDTO> teamWorkloadList = new ArrayList<>();
+
+        for(Map.Entry<SZP_User, List<Task>> entry : tasksByAssignee.entrySet()) {
+            SZP_User assignee = entry.getKey();
+            List<Task> assigneeTasks = entry.getValue();
+
+            int totalTasks = assigneeTasks.size();
+            int completedTasks = (int) assigneeTasks.stream().filter(t -> t.getStatus() == TaskStatus.DONE).count();
+
+            int proggress = totalTasks > 0 ? (int) Math.round((completedTasks * 100.0) / totalTasks) : 0;
+
+            teamWorkloadList.add(TeamWorkloadDTO.builder()
+                .completedTasks(completedTasks)
+                .totalTasks(totalTasks)
+                .progress(proggress)
+                .avatarUrl(user.getAvatarPath())
+                .id(user.getId())
+                .email(user.getEmail())
+                .name(user.getName() + " " + user.getSurname())
+                .build()
+            );
+        }
+
+        teamWorkloadList.sort((a, b) -> Integer.compare(b.getTotalTasks(), a.getTotalTasks()));
+
+        return teamWorkloadList;
     }
 
 }
