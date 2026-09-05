@@ -1,5 +1,6 @@
 package com.stg.szp.repos;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,4 +31,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     // Переделать так что бы считало и те проекты где пользователь как администратор
     Long countByMembers_Id(Long userId);
+
+    @Query("SELECT COUNT(p) FROM Project p WHERE (p.owner.id = :userId OR :userId IN (SELECT m.id FROM p.members m)) AND createdAt >= :startDate")
+    Long countNewProjectsSince(@Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
 }

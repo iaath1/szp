@@ -356,7 +356,13 @@ public class TaskService {
         long overdue = taskRepository.countByAssigneeIdAndStatus(userId, TaskStatus.OVERDUE);
         long review = taskRepository.countByAssigneeIdAndStatus(userId, TaskStatus.REVIEW);
 
-        return new TaskStatusCountDTO(todo, inProgress, done, review, overdue);
+        LocalDateTime startDate = LocalDateTime.now().minusDays(30);
+
+        long doneChange = taskRepository.countByAssigneeIdAndStatusAndUpdatedAtGreaterThanEqual(userId, TaskStatus.DONE, startDate);
+        long inProggressChange = taskRepository.countByAssigneeIdAndStatusAndUpdatedAtGreaterThanEqual(userId, TaskStatus.IN_PROGRESS, startDate);
+        long overdueChange = taskRepository.countByAssigneeIdAndStatusAndUpdatedAtGreaterThanEqual(userId, TaskStatus.OVERDUE, startDate);
+
+        return new TaskStatusCountDTO(todo, inProgress, done, review, overdue, doneChange, inProggressChange, overdueChange);
     }
 
     public List<UpcomingTasksDTO> getTasksOrderedByDeadline(SZP_User user) {
@@ -601,6 +607,37 @@ public class TaskService {
         teamWorkloadList.sort((a, b) -> Integer.compare(b.getTotalTasks(), a.getTotalTasks()));
 
         return teamWorkloadList;
+    }
+
+
+    public List<Map<String, Object>> getProjectTaskVelocityChart(Long projectId, int days) {
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(days - 1);
+
+        List<Object[]> results = taskRepository.countCompletedTasksByDateAndProject(projectId, startDate.atStartOfDay());
+
+        Map<String, Long> res = new HashMap<>();
+        for(Object[] row : results) {
+            String dateStr = row[0].toString();
+            Long count = ((Number) row[1]).longValue();
+            res.put(dateStr, count);
+        }
+
+        List<Map<String, Object>> chartData = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd");
+
+        for(int i = 0; i < days; i++) {
+            LocalDate currentDate = startDate.plusDays(i);
+            String dbDataKey = currentDate.toString();
+
+            Map<String, Object> dayData = new HashMap<>();
+            dayData.put("date", currentDate.format(formatter));
+            dayData.put("completed", res.getOrDefault(dbDataKey, 0L));
+
+            chartData.add(dayData);
+        }
+
+        return chartData;
     }
 
 }

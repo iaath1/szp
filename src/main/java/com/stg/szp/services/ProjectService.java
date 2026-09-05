@@ -14,6 +14,7 @@ import com.stg.szp.DTO.EditProjectDTO;
 import com.stg.szp.DTO.MyProjectDTO;
 import java.util.Optional;
 import com.stg.szp.DTO.MyProjectsStatsDTO;
+import com.stg.szp.DTO.NumberResponseDTO;
 import com.stg.szp.DTO.ProjectDetailsDTO;
 import com.stg.szp.DTO.ProjectFileDTO;
 import com.stg.szp.DTO.ProjectResponseDTO;
@@ -251,8 +252,18 @@ public class ProjectService {
         return false;
     }
 
-    public Long getUserProjectsCount(Long userId) {
-        return projectRepository.countByMembers_Id(userId);
+    public NumberResponseDTO getUserProjectsCount(Long userId) {
+        Long ownerCount = projectRepository.countByOwnerId(userId);
+        Long memberCount = projectRepository.countByMembers_Id(userId);
+        Long total = memberCount + ownerCount;
+
+        LocalDateTime startDate = LocalDateTime.now().minusDays(30);
+        Long change = projectRepository.countNewProjectsSince(userId, startDate);
+
+        return NumberResponseDTO.builder()
+            .count(total)
+            .change(change)
+            .build();
     }
 
     @Transactional

@@ -143,7 +143,7 @@ public class ProjectController {
     @GetMapping("/count")
     public ResponseEntity<NumberResponseDTO> getAllProjectsCount(@AuthenticationPrincipal SZP_User user) {
         if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        NumberResponseDTO response = new NumberResponseDTO(projectService.getUserProjectsCount(user.getId()));
+        NumberResponseDTO response = projectService.getUserProjectsCount(user.getId());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

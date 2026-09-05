@@ -128,7 +128,7 @@ public class TaskController {
     @GetMapping("/count")
     public ResponseEntity<NumberResponseDTO> getCountAllUserTasks(@AuthenticationPrincipal SZP_User user) {
         if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        NumberResponseDTO response = new NumberResponseDTO(taskService.getCountAllUserTasks(user.getId()));
+        NumberResponseDTO response = new NumberResponseDTO(taskService.getCountAllUserTasks(user.getId()), 0L);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -226,5 +226,12 @@ public class TaskController {
         if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
 
         return new ResponseEntity<>(taskService.getTeamWorkload(user), HttpStatus.OK);
+    }
+
+    @GetMapping("/project-velocity")
+    public ResponseEntity<List<Map<String, Object>>> getProjectVelocityChart(@RequestParam Long projectId, @RequestParam(defaultValue = "30") int days) {
+        List<Map<String, Object>> response = taskService.getProjectTaskVelocityChart(projectId, days);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

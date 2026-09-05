@@ -41,4 +41,18 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Object[]> countCompletedTasksByDate(@Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
 
     List<Task> findByAssigneeIdAndDeadlineAtBetween(Long assigneeId, LocalDateTime starTime, LocalDateTime endTime);
+
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.assignee.id = :assigneeId AND t.status = :status AND t.updatedAt >= :startDate")
+    Long countByAssigneeIdAndStatusAndUpdatedAtGreaterThanEqual(
+        @Param("assigneeId") Long assigneeId,
+        @Param("status") TaskStatus status,
+        @Param("startDate") LocalDateTime startDate
+    );
+
+    @Query(
+        "SELECT FUNCTION('DATE', t.completedAt), COUNT(t) FROM Task t " +
+        "WHERE t.project.id = :projectId AND t.completedAt >= :startDate " +
+        "GROUP BY FUNCTION('DATE', t.completedAt)"
+    )
+    List<Object[]> countCompletedTasksByDateAndProject(@Param("projectId") Long projectId, @Param("startDate") LocalDateTime startDate); 
 }
