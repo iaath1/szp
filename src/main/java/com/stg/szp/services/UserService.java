@@ -173,10 +173,10 @@ public class UserService {
             .avatarUrl(user.getAvatarPath())
             .bio(user.getBio())
             .notifications(mapToNotificationsPreferencesDTO(user.getNotificationPreferences()))
-            .mfaEnabled(user.isMfaEnabled())
+            .mfaEnabled(user.getMfaEnabled())
             .theme(user.getTheme())
             .accentColor(user.getAccentColor())
-            .compactMode(user.isCompactMode())
+            .compactMode(user.getCompactMode())
             .build();
     }
 

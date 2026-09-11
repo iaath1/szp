@@ -80,7 +80,7 @@ public class SZP_User implements UserDetails {
     private String accentColor = "#592BF0";
 
     @Column(name = "compact_mode")
-    private boolean compactMode = false;
+    private Boolean compactMode = false;
 
     @JsonIgnore
     @ManyToMany(mappedBy = "members")
@@ -93,7 +93,7 @@ public class SZP_User implements UserDetails {
     private List<TaskComment> comments = new ArrayList<>();
 
     @Column(name = "mfa_enabled")
-    private boolean mfaEnabled = false;
+    private Boolean mfaEnabled = false;
 
     @Column(name = "mfa_secret")
     private String mfaSecret;

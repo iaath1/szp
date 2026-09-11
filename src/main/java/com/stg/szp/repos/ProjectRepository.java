@@ -34,4 +34,9 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     @Query("SELECT COUNT(p) FROM Project p WHERE (p.owner.id = :userId OR :userId IN (SELECT m.id FROM p.members m)) AND createdAt >= :startDate")
     Long countNewProjectsSince(@Param("userId") Long userId, @Param("startDate") LocalDateTime startDate);
+
+    @Query("SELECT p FROM Project p WHERE (p.owner.id = :userId OR :userId IN (SELECT m.id FROM p.members m))" +
+            "AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.projectKey) LIKE LOWER(CONCAT('%', :query, '%')))"
+    )
+    List<Project> searchProjects(@Param("userId") Long userId, @Param("query") String query);
 }

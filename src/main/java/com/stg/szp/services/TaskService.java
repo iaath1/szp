@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Service;
 
 import com.stg.szp.DTO.CreateTaskDTO;
@@ -116,6 +115,12 @@ public class TaskService {
             task.setAssignee(SZP_UserRepository.findByEmail(createTaskDTO.getAssigneeEmail()).orElse(null));
         } else {
             task.setAssignee(null);
+        }
+
+        if(createTaskDTO.getDeadlineAt() != null) {
+            if(createTaskDTO.getDeadlineAt().isBefore(LocalDateTime.now().toLocalDate().atStartOfDay())) {
+                throw new IllegalArgumentException("Deadline cannot be earlier than start date");
+            }
         }
 
         task.setCreatedAt(LocalDateTime.now());

@@ -76,6 +76,7 @@ public class ProjectService {
                 .status(project.getStatus())
                 .progress(getProjectProgress(project.getId()))
                 .deadLineAt(project.getDeadlineAt())
+                .projectKey(project.getProjectKey())
                 .updatedAt(project.getUpdatedAt())
                 .startAt(project.getStartAt())
                 .members(getProjectMembersWithLimit(project, 3L))
@@ -117,6 +118,10 @@ public class ProjectService {
         boolean exists = projectRepository.existsByOwnerIdAndProjectKey(user.getId(), normalizedKey);
         if (exists) {
             throw new IllegalArgumentException("Project key must be unique for this user");
+        }
+
+        if(startAt != null && deadlineAt != null) {
+            if(deadlineAt.isBefore(startAt)) throw new IllegalArgumentException("Deadline date cannot be earlier than start date.");
         }
 
         Project project = new Project();
@@ -341,6 +346,7 @@ public class ProjectService {
             .deadLineAt(project.getDeadlineAt())
             .updatedAt(project.getUpdatedAt())
             .startAt(project.getStartAt())
+            .projectKey(project.getProjectKey())
             .members(getProjectMembersWithLimit(project, 3L))
             .membersCount(project.getMembers().size())
             .tags(mapTagDTO(project))

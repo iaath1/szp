@@ -19,6 +19,7 @@ public class MyProjectDTO {
     private String title;
     private String description;
     private ProjectStatus status;
+    private String projectKey;
     private Long progress;
     private LocalDateTime deadLineAt;
     private LocalDateTime updatedAt;

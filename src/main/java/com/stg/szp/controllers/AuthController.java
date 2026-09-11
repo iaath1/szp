@@ -95,7 +95,7 @@ public class AuthController {
         try {
             SZP_User authenticatedUser = authService.authenticate(loginUserDTO);
 
-            if(authenticatedUser.isMfaEnabled()) {
+            if(authenticatedUser.getMfaEnabled()) {
                 return ResponseEntity.accepted().body(Map.of("message", "Enter your secret key."));
             }
 

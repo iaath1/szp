@@ -55,4 +55,10 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
         "GROUP BY FUNCTION('DATE', t.completedAt)"
     )
     List<Object[]> countCompletedTasksByDateAndProject(@Param("projectId") Long projectId, @Param("startDate") LocalDateTime startDate); 
+
+    @Query(
+        "SELECT t FROM Task t WHERE (t.project.owner.id = :userId OR :userId IN (SELECT m.id FROM t.project.members m)) " +
+        "AND LOWER(t.title) LIKE LOWER(CONCAT('%', :query, '%'))"
+    )
+    List<Task> searchTasks(@Param("userId") Long userId, @Param("query") String query);
 }
