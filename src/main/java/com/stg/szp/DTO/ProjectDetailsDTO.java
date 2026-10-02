@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Set;
 
 import com.stg.szp.models.ProjectStatus;
+import com.stg.szp.models.ProjectTemplate;
 import com.stg.szp.models.Task;
+import com.stg.szp.models.TaskStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -40,6 +42,13 @@ public class ProjectDetailsDTO {
     private LocalDateTime startAt;
 
     private LocalDateTime deadlineAt;
+
+    private boolean allowMembersInvite;
+    private boolean allowFileUploads;
+    private boolean publicLinkEnabled;
+    private boolean enableTaskComments;
+    private ProjectTemplate projectTemplate;
+    private TaskStatus defaultTaskStatus;
 
     private int membersCount;
     private int tasksCount;

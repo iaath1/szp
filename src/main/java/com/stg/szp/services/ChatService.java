@@ -31,19 +31,7 @@ public class ChatService {
 
     public List<ChatResponseDTO> getUserCharts(SZP_User user) {
         return chatRepo.findByMembersId(user.getId()).stream().map(
-            chat -> {
-                Message lastMessage = messageRepo.findFirstByChatIdOrderByCreatedAtAsc(chat.getId()).orElse(null);
-                int unread = messageRepo.countByChatIdAndIsReadFalseAndSenderIdNot(chat.getId(), user.getId());
-
-                return ChatResponseDTO.builder()
-                    .id(chat.getId())
-                    .name(chat.getName() != null ? chat.getName() : "Chat #" + chat.getId())
-                    .avatar("null")
-                    .lastMessage(lastMessage != null ? lastMessage.getText() : "")
-                    .time(lastMessage != null ? lastMessage.getCreatedAt().format(DateTimeFormatter.ofPattern("HH:mm")) : "")
-                    .unread(unread)
-                    .build();
-            }
+            chat -> toChatResponseDto(chat, user)
         ).collect(Collectors.toList());
     }
 

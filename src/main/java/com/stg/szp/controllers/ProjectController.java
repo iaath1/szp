@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -91,6 +92,7 @@ public class ProjectController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.notFound().build();
         }
     }
@@ -190,6 +192,22 @@ public class ProjectController {
         if(response == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{projectId}")
+    @PreAuthorize("@projectSecurity.hasAnyRole(principal, #projectId, 'OWNER')")
+    public ResponseEntity<?> deleteProject(@PathVariable Long projectId, @AuthenticationPrincipal SZP_User user) {
+        if(user == null) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+
+        try  {
+            projectService.deleteProject(projectId, user);
+            return ResponseEntity.ok().body("Project deleted successfully.");
+        } catch(IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch(Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.notFound().build();
+        }
     }
 
 }

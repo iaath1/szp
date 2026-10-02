@@ -43,6 +43,7 @@ import com.stg.szp.repos.TaskRepository;
 @Transactional
 public class ProjectService {
 
+    private final EmailService emailService;
     private final ProjectRepository projectRepository;
     private final SZP_UserRepository userRepository;
     private final TaskRepository taskRepo;
@@ -56,7 +57,7 @@ public class ProjectService {
             TaskRepository taskRepo,
             ProjectMemberRepository projectMemberRepo,
             ProjectFileRepository pfRepo,
-            NotificationService notificationService
+            NotificationService notificationService, EmailService emailService
         ) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
@@ -64,6 +65,7 @@ public class ProjectService {
         this.projectMemberRepo = projectMemberRepo;
         this.pfRepo = pfRepo;
         this.notificationService = notificationService;
+        this.emailService = emailService;
     }
 
     @Transactional(readOnly = true)
@@ -173,7 +175,20 @@ public class ProjectService {
         project.setStatus(editProjectDTO.getStatus());
         project.setStartAt(editProjectDTO.getStartAt());
         project.setDeadlineAt(editProjectDTO.getDeadlineAt());
-        project.setTags(editProjectDTO.getTags());
+        // project.setTags(editProjectDTO.getTags());
+
+        project.setAllowFileUploads(editProjectDTO.isAllowFileUploads());
+        project.setAllowMembersInvite(editProjectDTO.isAllowMembersInvite());
+        project.setEnableTaskComments(editProjectDTO.isEnableTaskComments());
+        project.setPublicLinkEnabled(editProjectDTO.isPublicLinkEnabled());
+
+        if(editProjectDTO.getDefaultTaskStatus() != null) {
+            project.setDefaultTaskStatus(editProjectDTO.getDefaultTaskStatus());
+        }
+
+        if(editProjectDTO.getProjectTemplate() != null) {
+            project.setProjectTemplate(editProjectDTO.getProjectTemplate());
+        }
 
         try {
             projectRepository.save(project);
@@ -216,11 +231,23 @@ public class ProjectService {
                         .deadlineAt(project.getDeadlineAt())
                         .startAt(project.getStartAt())
                         .tags(mapTagDTO(project))
+                        .allowFileUploads(project.isAllowFileUploads())
+                        .allowMembersInvite(project.isAllowMembersInvite())
+                        .enableTaskComments(project.isEnableTaskComments())
+                        .defaultTaskStatus(project.getDefaultTaskStatus())
+                        .projectTemplate(project.getProjectTemplate())
                         .build();
             }
         }
 
         return null;
+    }
+
+    @Transactional
+    public void deleteProject(Long projectId, SZP_User user) throws Exception {
+        Project project = projectRepository.findById(projectId).orElseThrow(() -> new RuntimeException("Project with id: " + projectId + " was not found"));
+
+        projectRepository.delete(project);
     }
 
     public boolean addNewMemberToProject(SZP_User user, Long projectId, AddUserToProjectDTO dto) {
@@ -240,6 +267,12 @@ public class ProjectService {
             return false;
         }
 
+
+        // Need to be tested
+        if(!project.isAllowMembersInvite() && !user.getId().equals(project.getOwner().getId())) return false;
+
+        if(project.getMembers().contains(userToAdd)) return false;
+
         if (!project.getOwner().getId().equals(userToAdd.getId())) {
             
             project.getMembers().add(userToAdd);
@@ -251,7 +284,12 @@ public class ProjectService {
                 "Invite to project", 
                 "You have been invited to project: " + project.getTitle(), 
                 "/projects/" + project.getId());
-            return true;
+            
+                String subject = "You were invited to project: " + project.getTitle();
+                String body = "Hi, " + userToAdd.getName() + "!\n\n" +
+                                "You were invited to project \"" + project.getTitle() + "\".\n" +
+                                "Enter to system to view tasks.";
+                emailService.sendEmail(userToAdd.getEmail(), subject, body);
         }
 
         return false;

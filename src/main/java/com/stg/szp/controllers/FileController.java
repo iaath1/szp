@@ -18,8 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 
 import com.stg.szp.DTO.UploadFileResponse;
+import com.stg.szp.models.Project;
 import com.stg.szp.models.ProjectFile;
 import com.stg.szp.models.SZP_User;
 import com.stg.szp.repos.ProjectFileRepository;
@@ -62,6 +64,11 @@ public class FileController {
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal SZP_User user
         ) {
+
+        Project project = projectRepo.findById(projectId).orElse(null);
+        if(project == null) return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+
+        if(!project.isAllowFileUploads() && !project.getOwner().getId().equals(user.getId())) return new ResponseEntity<>(HttpStatus.BAD_REQUEST); 
         
         String targetDirectory = "projects/" + projectId;
         String fileName = fileService.saveFile(file, targetDirectory);

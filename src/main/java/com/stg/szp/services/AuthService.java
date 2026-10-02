@@ -27,18 +27,21 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authManager;
     private final JwtService jwtService;
+    private final EmailService emailService;
 
     public AuthService(SZP_UserRepository userRepo,
         PasswordEncoder passwordEncoder,
         AuthenticationManager authManager,
         RoleRepository roleRepository,
-        JwtService jwtService
+        JwtService jwtService,
+        EmailService emailService
     ) {
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
         this.authManager = authManager;
         this.roleRepository = roleRepository;
         this.jwtService = jwtService;
+        this.emailService = emailService;
     }
 
     public SZP_User signup(RegisterUserDTO input) {
@@ -49,7 +52,15 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(input.getPassword()));
         user.setRoles(Set.of(roleRepository.findByRoleName("ROLE_USER").get()));
 
-        return userRepo.save(user);
+        SZP_User savedUser = userRepo.save(user);
+        
+        String subject = "Welcome to SZP!";
+        String body = "Hello, " + savedUser.getName() + "!\n\n" +
+                        "Thanks for registration in our app. " +
+                        "We glad to see you in our team!";
+        emailService.sendEmail(savedUser.getEmail(), subject, body);
+
+        return savedUser;
     }
 
     public SZP_User authenticate(LoginUserDTO input) {

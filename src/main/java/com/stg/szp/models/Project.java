@@ -60,6 +60,26 @@ public class Project {
     @Column(nullable = false)
     private ProjectStatus status;
 
+    @Column(name = "project_template")
+    @Enumerated(EnumType.STRING)
+    private ProjectTemplate projectTemplate;
+
+    @Column(name = "default_task_status")
+    @Enumerated(EnumType.STRING)
+    private TaskStatus defaultTaskStatus;
+
+    @Column(name = "allow_members_invite")
+    private boolean allowMembersInvite = true;
+
+    @Column(name = "enable_task_comments")
+    private boolean enableTaskComments = true;
+
+    @Column(name = "public_link_enabled")
+    private boolean publicLinkEnabled = false;
+
+    @Column(name = "allow_file_uploads")
+    private boolean allowFileUploads = true;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "owner_id", nullable = false)
     private SZP_User owner;
@@ -92,6 +112,9 @@ public class Project {
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Task> tasks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectMember> projectMemberEntities = new ArrayList<>();
 
     
 

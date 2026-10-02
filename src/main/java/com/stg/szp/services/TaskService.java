@@ -268,6 +268,8 @@ public class TaskService {
             Task taskToUpdate = taskRepository.findById(taskId).get();
             ProjectFile file = projectFileRepo.findById(fileId).get();
 
+            if(!taskToUpdate.getProject().isAllowFileUploads() && !taskToUpdate.getProject().getOwner().getId().equals(user.getId())) return null;
+
             file.setTask(taskToUpdate);
             projectFileRepo.save(file);
             
@@ -490,6 +492,9 @@ public class TaskService {
 
     public TaskCommentDTO addCommentToTask(Long taskId, TaskCommentDTO dto, SZP_User author) {
         if(!taskRepository.existsById(taskId) || author == null) return null;
+        Project project = taskRepository.findById(taskId).get().getProject();
+
+        if(!project.getOwner().getId().equals(author.getId()) && !project.isEnableTaskComments()) return null;
 
         TaskComment comment = new TaskComment();
         comment.setAuthor(author);
